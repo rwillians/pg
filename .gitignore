@@ -1,0 +1,4 @@
+node_modules/
+.ignored/
+.DS_Store
+.envrc
