@@ -9,10 +9,10 @@ Managed PostgreSQL made easy.
 ## Features
 
 - **WAL Archiving**: Continuous backup of Write-Ahead Logs (WAL) into any S3-compatible object storage.
-- **Automatic Backups**: Daily full Base Backups.
+- **Automatic Backups**: Weekly full Base Backup, daily incremental Base Backup.
 - **Custom Retention Period**: Configure how long you want to keep your Base Backups.
 - **Point-in-Time Recovery**: Restore your database to any point in time (within your retention period).
-- **SSL Certificates**: Automatically manage SSL certificates for secure connections.
+- **TLS Certificates**: Automatically manage TLS certificates for secure connections.
 
 
 ## Beware of

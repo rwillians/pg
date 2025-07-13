@@ -1,22 +1,21 @@
 import { statSync } from 'node:fs';
 import { $, randomUUIDv7 } from 'bun';
 import { execSync } from 'node:child_process';
-import { loadState } from '../../state';
 import { $command, $options } from '../commands';
+import { type Context } from '../../context';
+import { type Logger } from '../../logger';
+import { Backup } from '../../db/backup';
 import { s } from '../../utils';
-import type { Context } from '../../context';
 
 const getPreviousBackupInfo = async (ctx: Context, incremental: boolean) => {
-  const { logger, s3 } = ctx;
+  const { db, logger, s3 } = ctx;
 
   if (!incremental) {
     return [null, undefined] as const;
   }
 
   logger.debug('Looking for the last backup');
-  const state = await loadState(ctx);
-  const backups = await state.backups.all();
-  const lastBackup = backups[backups.length - 1];
+  const lastBackup = await Backup.latestBy(db, 'completedAt');
 
   if (!lastBackup) {
     return [null, undefined] as const;
@@ -32,7 +31,29 @@ const getPreviousBackupInfo = async (ctx: Context, incremental: boolean) => {
   return [lastBackup.id, localManifestPath] as const;
 };
 
+const run = (logger: Logger, { fast, backupPath, previousManifestPath }: Record<string, any>) => {
+  if (!fast) {
+    logger.debug('This may take a while, we\'re waiting for the next checkpoint to finish before taking the backup');
+  }
+
+  if (previousManifestPath) {
+    return fast
+      ? $`pg_basebackup -c fast -D ${backupPath} -P --incremental ${previousManifestPath}`
+      : $`pg_basebackup -D ${backupPath} -P --incremental ${previousManifestPath}`;
+  }
+
+  return fast
+    ? $`pg_basebackup -c fast -D ${backupPath} -P`
+    : $`pg_basebackup -D ${backupPath} -P`;
+};
+
 const options = $options({
+  fast: {
+    describe: 'Will not wait for the next checkpoint to finish before taking the backup',
+    type: 'boolean',
+    default: false,
+    alias: 'f',
+  },
   incremental: {
     describe: 'Creates an incremental backup containing the data changed since the last backup',
     type: 'boolean',
@@ -41,30 +62,34 @@ const options = $options({
   },
 });
 
-export const createBackup = $command({
-  signature: 'backup:create',
+export const backupNew = $command({
+  signature: 'new',
   describe: 'Creates a new backup',
-  builder: (cli) => cli.option('incremental', options.incremental),
+  builder: (cli) => cli
+    .option('fast', options.fast)
+    .option('incremental', options.incremental),
   handler: async (argv, ctx) => {
-    const { config, logger, s3 } = ctx;
+    const { fast, incremental } = argv;
+    const { config, db, logger, s3 } = ctx;
 
-    logger.info('Backup in progress');
+    incremental
+      ? logger.info('Incremental backup in progress')
+      : logger.info('Full backup in progress');
+
     const tempId = randomUUIDv7();
     const filename = `${tempId}.tar.gz`;
     const localTarPath = `/tmp/${tempId}/${filename}`;
     const localManifestPath = `/tmp/${tempId}/backup_manifest`;
-    const remotePath = `${config.PG_BACKUPS_DIR}/${filename}`;
-    const remoteManifestPath = `${config.PG_BACKUPS_DIR}/${tempId}.manifest`;
+    const remotePath = `${config.S3_BACKUPS_PREFIX}/${filename}`;
+    const remoteManifestPath = `${config.S3_BACKUPS_PREFIX}/${tempId}.manifest`;
 
-    const [previousBackupId, manifestPath] = await getPreviousBackupInfo(ctx, argv.incremental);
-    if (!previousBackupId) logger.debug('No previous backup found, falling back to a full backup instead');
+    const [previousBackupId, previousManifestPath] = await getPreviousBackupInfo(ctx, incremental);
+    if (incremental && !previousBackupId) logger.debug('No previous backup found, falling back to a full backup instead');
 
     logger.debug('Creating backup')
     const startedAt = new Date();
     const start = performance.now();
-    manifestPath
-      ? await $`pg_basebackup -c fast -D /tmp/${tempId} -P --incremental ${manifestPath}`.text()
-      : await $`pg_basebackup -c fast -D /tmp/${tempId} -P`.text();
+    await run(logger, { fast, incremental, backupPath: `/tmp/${tempId}`, previousManifestPath }).text();
     const completedAt = new Date();
 
     logger.debug('Compressing backup');
@@ -76,8 +101,7 @@ export const createBackup = $command({
     await s3.file(remoteManifestPath).write(Bun.file(localManifestPath));
 
     logger.debug('Updating internal state');
-    const state = await loadState(ctx);
-    const backup = await state.backups.create({
+    const backup = await Backup.insertOne(db, {
       parentId: previousBackupId,
       tar: remotePath,
       manifest: remoteManifestPath,

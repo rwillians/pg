@@ -1,33 +1,32 @@
 import { basename } from 'node:path';
 import { $command, $options } from '../commands';
-import { loadState } from '../../state';
+import { Dump } from '../../db/dump';
 import { s } from '../../utils';
 
 const options = $options({
   id: {
     describe: 'The id of the dump to download',
-    type: 'string',
+    type: 'number',
     demandOption: true,
   },
 });
 
-export const downloadDump = $command({
+export const dumpDownload = $command({
   signature: 'dump:download <id>',
   describe: 'Downloads a dump from S3 into the current directory',
   builder: (cli) => cli.positional('id', options.id),
   handler: async (argv, ctx) => {
     const { id } = argv;
-    const { logger, s3 } = ctx;
+    const { db, logger, s3 } = ctx;
 
-    const state = await loadState(ctx);
-    const dump = await state.dumps.find(id);
+    const dump = await Dump.findOneById(db, id);
 
     if (!dump) {
       logger.error(`Dump ${s.red(id)} not found`)
       process.exit(1);
     }
 
-    const remoteFile = s3.file(dump.tar);
+    const remoteFile = s3.file(dump.path);
     const remoteUrl = `s3://${remoteFile.name}`;
 
     if (!await remoteFile.exists()) {
@@ -35,7 +34,7 @@ export const downloadDump = $command({
       process.exit(1);
     }
 
-    const localPath = `./${basename(dump.tar)}`;
+    const localPath = `./${basename(dump.path)}`;
     const localFile = Bun.file(localPath);
 
     logger.info(`Downloading dump ${s.blue(dump.id)} from ${remoteUrl}`);

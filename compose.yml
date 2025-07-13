@@ -25,9 +25,11 @@ services:
       - 5432:5432
     volumes:
       - pg-data:/var/lib/postgresql/data
+      - pg-state:/var/lib/pg
     depends_on:
       - minio
 
 volumes:
   minio-data:
   pg-data:
+  pg-state:

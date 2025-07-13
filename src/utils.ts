@@ -1,6 +1,5 @@
 import { isAbsolute } from 'node:path';
 import { z } from 'zod/v4';
-import { default as cloneDeep } from 'lodash.clonedeep'
 
 //////////////////////////////////////////////////////////////////////
 ///                             LODASH                             ///
@@ -9,7 +8,6 @@ import { default as cloneDeep } from 'lodash.clonedeep'
 const keys = <T extends Record<string, any>>(obj: T) => Object.keys(obj) as (keyof T)[];
 
 export const _ = {
-  cloneDeep,
   keys,
 };
 
@@ -35,13 +33,13 @@ const ASCII_STYLE_CODES = {
  * Terminal styles for ASCII output.
  */
 export const s: {
-  [K in keyof typeof ASCII_STYLE_CODES]: (str: string) => string;
+  [K in keyof typeof ASCII_STYLE_CODES]: (str: any) => string;
 } & {
-  default: (str: string) => string;
+  default: (str: any) => string;
 } = Object.fromEntries(
   Object.entries(ASCII_STYLE_CODES)
-    .map(([key, style]) => [key, (str: string) => `\u001b[${style.open}m${str}\u001b[${style.close}m`])
-    .concat([['default', (str: string) => str.toString()]]), // just an alias for no style
+    .map(([key, style]) => [key, (str: any) => `\u001b[${style.open}m${str}\u001b[${style.close}m`])
+    .concat([['default', (str: any) => str.toString()]]), // just an alias for no style
 );
 
 //////////////////////////////////////////////////////////////////////
@@ -61,6 +59,10 @@ export const withHumanReadableSize = <T extends { size: number, [k: string]: any
   size: humanReadableSize(data.size),
 });
 
+export const sumBy = <T extends Record<string, any>, K extends keyof T>(k: K) =>
+  (acc: number, item: T): number =>
+    acc + (item[k] ?? 0);
+
 //////////////////////////////////////////////////////////////////////
 ///                              ZOD                               ///
 //////////////////////////////////////////////////////////////////////
@@ -74,12 +76,6 @@ const absolutePath = () => z
   .min(1, { error: 'cannot be empty' })
   .refine(isAbsolute, { error: 'must be an absolute path' })
   .transform(removeTrailing('/'));
-
-const id = () => z
-  .coerce
-  .number()
-  .min(1, { error: 'must be greater than or equal to 1' })
-  .transform((value) => value.toString())
 
 const secret = () => z
   .string()
@@ -100,7 +96,6 @@ const nen = () => z
  */
 export const t = {
   absolutePath,
-  id,
   nen,
   secret,
 };

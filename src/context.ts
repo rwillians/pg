@@ -1,6 +1,7 @@
 import { S3Client } from 'bun';
 import { createLogger } from './logger';
 import { parseConfig } from './config';
+import { connect, setup } from './db';
 
 export const createContext = async (env: Bun.Env) => {
   const config = parseConfig(env);
@@ -17,8 +18,12 @@ export const createContext = async (env: Bun.Env) => {
     region: config.S3_REGION,
   });
 
+  const db = await connect(config);
+  await setup(db);
+
   return {
     config,
+    db,
     logger,
     s3,
   };

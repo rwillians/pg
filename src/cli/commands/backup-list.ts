@@ -1,13 +1,14 @@
 import { withHumanReadableSize } from '../../utils';
-import { loadState } from '../../state';
+import { Backup } from '../../db/backup';
 import { $command } from '../commands';
 
-export const listBackups = $command({
-  signature: 'backup:list',
+export const backupList = $command({
+  signature: 'ls',
   describe: 'Lists all available backups',
   handler: async (_argv, ctx) => {
-    const state = await loadState(ctx);
-    const backups = await state.backups.all();
+    const { db } = ctx;
+    const backups = await Backup.all(db);
+
     console.table(backups.map(withHumanReadableSize));
   },
 });

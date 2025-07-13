@@ -102,6 +102,7 @@ const main = async () => {
     await sql`INSERT INTO load_test ${sql(batch)};`;
     count += 1000;
     logger.info(`Inserted ${count} records...`);
+    await Bun.sleep(100);
   }
 
   logger.info('Done!');

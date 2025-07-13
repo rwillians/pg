@@ -3,7 +3,7 @@ import { randomUUIDv7 } from 'bun';
 import { execSync } from 'node:child_process';
 import { $command, $options } from '../commands';
 import type { Context } from '../../context';
-import { loadState } from '../../state';
+import { Dump } from '../../db/dump';
 import { s } from '../../utils';
 
 const redact = (connectionString: string) => {
@@ -40,25 +40,24 @@ const toDumpBaseCommand = (ctx: Context, connectionString: string | undefined) =
 };
 
 const options = $options({
-  connectionString: {
+  from: {
     describe: 'Connection string to database to dump',
     type: 'string',
-    alias: 'c',
   },
 });
 
-export const createDump = $command({
-  signature: 'dump:create',
+export const dumpNew = $command({
+  signature: 'new',
   describe: 'Creates a new dump file',
-  builder: (cli) => cli.options('connection-string', options.connectionString),
+  builder: (cli) => cli.options('from', options.from),
   handler: async (argv, ctx) => {
-    const { connectionString } = argv;
-    const { config, logger, s3 } = ctx;
+    const { from: connectionString } = argv;
+    const { config, db, logger, s3 } = ctx;
 
     const id = randomUUIDv7();
     const localPath = `/tmp/${id}.dump`;
     const localFile = Bun.file(localPath);
-    const remotePath = `${config.PG_DUMPS_DIR}/${id}.dump`;
+    const remotePath = `${config.S3_DUMPS_PREFIX}/${id}.dump`;
     const remoteFile = s3.file(remotePath);
 
     logger.info('Dump in progress');
@@ -73,13 +72,15 @@ export const createDump = $command({
     const elapsed = Math.round((performance.now() - start) / 1000);
 
     logger.debug('Updating internal state');
-    const state = await loadState(ctx);
-    const dump = await state.dumps.create({
-      tar: remotePath,
+    const dump = await Dump.insertOne(db, {
+      path: remotePath,
       size: statSync(localPath).size,
       startedAt,
       completedAt
     });
+
+    logger.debug('Deleting temporary files');
+    await localFile.unlink();
 
     logger.info(`Dump ${s.blue(dump.id)} created successfully! Took ${elapsed}s`)
   },

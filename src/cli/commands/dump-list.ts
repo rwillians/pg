@@ -1,13 +1,14 @@
 import { withHumanReadableSize } from '../../utils';
-import { loadState } from '../../state';
 import { $command } from '../commands';
+import { Dump } from '../../db/dump';
 
-export const listDumps = $command({
-  signature: 'dump:list',
+export const dumpList = $command({
+  signature: 'ls',
   describe: 'Lists all dumps available',
   handler: async (_argv, ctx) => {
-    const state = await loadState(ctx);
-    const dumps = await state.dumps.all();
+    const { db } = ctx;
+    const dumps = await Dump.all(db);
+
     console.table(dumps.map(withHumanReadableSize));
   },
 });

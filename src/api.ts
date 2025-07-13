@@ -2,9 +2,11 @@ import { $ } from 'bun';
 import type { Context } from './context';
 import type { Logger } from './logger';
 
+const hasFlag = (req: Request, flag: string) => new URL(req.url).searchParams.has(flag);
+
 const response = async (logger: Logger, prom: Promise<any>) => prom
   .then(() => new Response('', { status: 204 }))
-  .catch((err) => { logger.error(err); return new Response(err.stack, { status: 500 }) })
+  .catch((err) => { logger.error(err); return new Response(err.stack, { status: 500 }) });
 
 export const createApi = async (ctx: Context, signal: AbortSignal) => {
   const { config, logger } = ctx;
@@ -17,22 +19,19 @@ export const createApi = async (ctx: Context, signal: AbortSignal) => {
       '/api': {
         GET: async () => new Response('', { status: 204 }),
       },
-      '/api/triggers/create-backup': {
-        POST: async () => {
-          logger.info('POST /api/triggers/create-backup');
-          return response(logger, $`pg backup:create`);
+      '/api/webhooks/backup-new': {
+        POST: async (req) => {
+          logger.info('POST /api/webhooks/backup-new');
+
+          return hasFlag(req, 'incremental')
+            ? response(logger, $`pg backup new -i`)
+            : response(logger, $`pg backup new`);
         },
       },
-      '/api/triggers/create-incremental-backup': {
+      '/api/webhooks/dump-new': {
         POST: async () => {
-          logger.info('POST /api/triggers/create-incremental-backup');
-          return response(logger, $`pg backup:create -i`);
-        },
-      },
-      '/api/triggers/create-dump': {
-        POST: async () => {
-          logger.info('POST /api/triggers/create-dump');
-          return response(logger, $`pg dump:create`);
+          logger.info('POST /api/webhooks/dump-new');
+          return response(logger, $`pg dump new`);
         },
       },
     },

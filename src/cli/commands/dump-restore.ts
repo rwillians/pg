@@ -3,7 +3,7 @@ import { $, randomUUIDv7 } from 'bun';
 import { execSync } from 'node:child_process';
 import { $command, $options } from '../commands';
 import type { Context } from '../../context';
-import { loadState } from '../../state';
+import { Dump } from '../../db/dump';
 import { s } from '../../utils';
 
 const deleteTempFiles = (ctx: Context, path: string) => async () => {
@@ -15,18 +15,17 @@ const deleteTempFiles = (ctx: Context, path: string) => async () => {
     .catch(() => logger.warning(`Failed to delete temporary file ${s.red(path)}, will just leave it there`));
 };
 
-const s3Downloader = (ctx: Context, source: string) => async () => {
-  const { logger, s3 } = ctx;
+const s3Downloader = (ctx: Context, id: number) => async () => {
+  const { db, logger, s3 } = ctx;
 
-  const state = await loadState(ctx);
-  const dump = await state.dumps.find(source);
+  const dump = await Dump.findOneById(db, id);
 
   if (!dump) {
-    logger.error(`Dump ${s.blue(source)} not found`);
+    logger.error(`Dump ${s.blue(id)} not found`);
     process.exit(1);
   }
 
-  const s3File = s3.file(dump.tar);
+  const s3File = s3.file(dump.path);
   const s3Url = `s3://${s3File.name}`;
 
   if (!await s3File.exists()) {
@@ -41,21 +40,21 @@ const s3Downloader = (ctx: Context, source: string) => async () => {
   return [localPath, deleteTempFiles(ctx, localPath)] as const;
 };
 
-const urlDownloader = (ctx: Context, source: string) => async () => {
+const urlDownloader = (ctx: Context, url: string) => async () => {
   const { logger } = ctx;
 
-  logger.debug(`Downloading dump from ${s.blue(source)}`);
+  logger.debug(`Downloading dump from ${s.blue(url)}`);
   const localPath = `/tmp/${randomUUIDv7()}.dump`;
-  execSync(`wget -O ${localPath} ${source}`);
+  execSync(`wget -O ${localPath} ${url}`);
 
   return [localPath, deleteTempFiles(ctx, localPath)] as const;
 };
 
-const fsDownloader = (ctx: Context, source: string) => async () => {
+const fsDownloader = (ctx: Context, path: string) => async () => {
   const { logger } = ctx;
 
-  if (!existsSync(source)) {
-    logger.error(`File ${s.red(source)} not found`);
+  if (!existsSync(path)) {
+    logger.error(`File ${s.red(path)} not found`);
     process.exit(1);
   }
 
@@ -65,14 +64,14 @@ const fsDownloader = (ctx: Context, source: string) => async () => {
     logger.debug(`The file was already there before running this command, so it's probably best to not delete it`);
   };
 
-  return [source, cleanup] as const;
+  return [path, cleanup] as const;
 };
 
 const selectDownloader = (ctx: Context, source: string) => {
   const { logger } = ctx;
 
   if (source.match(/^\d+$/)) {
-    return [s3Downloader(ctx, source), `dump ${s.blue(source)}`] as const;
+    return [s3Downloader(ctx, parseInt(source, 10)), `dump ${s.blue(source)}`] as const;
   } else {
     logger.debug(`Source isn't a dump id`);
   }
@@ -98,8 +97,8 @@ const options = $options({
   },
 });
 
-export const restoreDump = $command({
-  signature: 'dump:restore <source>',
+export const dumpRestore = $command({
+  signature: 'restore <source>',
   describe: 'Restores the database from a dump file',
   builder: (cli) => cli.positional('source', options.source),
   handler: async (argv, ctx) => {

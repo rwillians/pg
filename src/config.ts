@@ -1,4 +1,4 @@
-import { t, s, z } from './utils';
+import { s, t, z } from './utils';
 
 /**
  * @private
@@ -10,7 +10,7 @@ const NODE_ENV = process.env.NODE_ENV || 'dev';
  */
 const ConfigSchema = z.object({
   /**
-   * PostgreSQL settings
+   * postgres settings
    */
   POSTGRES_USER: z.literal('postgres').default('postgres'),
   //                           ↑
@@ -25,36 +25,37 @@ const ConfigSchema = z.object({
   POSTGRES_MAX_WAL_SIZE: z.enum(['16MB', '32MB', '64MB', '128MB', '256MB', '512MB', '1GB']).default('32MB'),
 
   /**
-   * S3-compatible storage credentials
+   * s3-compatible settings
    */
   S3_ENDPOINT: z.url(),
   S3_ACCESS_KEY_ID: z.string().min(1),
   S3_SECRET_ACCESS_KEY: t.secret(),
   S3_BUCKET: z.string().min(1),
   S3_REGION: z.string().min(1).optional(),
+  S3_ARCHIVES_PREFIX: t.absolutePath().default('/archives'),
+  S3_BACKUPS_PREFIX: t.absolutePath().default('/backups'),
+  S3_DUMPS_PREFIX: t.absolutePath().default('/dumps'),
+  S3_CERTS_PREFIX: t.absolutePath().default('/certs'),
 
   /**
-   * SSL settings
+   * ssl settings
    */
-  SSL_SUBJECT_EXPIRY_DAYS: z.coerce.number().int().min(90).max(365).default(365),
-  SSL_SUBJECT_COUNTRY: z.string().default(''),
-  SSL_SUBJECT_STATE: z.string().default(''),
-  SSL_SUBJECT_LOCALITY: z.string().default(''),
-  SSL_SUBJECT_ORGANIZATION: z.string().default(''),
-  SSL_SUBJECT_ORGANIZATIONAL_UNIT: z.string().default(''),
-  SSL_SUBJECT_COMMON_NAME: z.string().default(''),
-  SSL_SUBJECT_EMAIL: z.email().default(''),
+  TLS_SUBJECT_EXPIRY_DAYS: z.coerce.number().int().min(90).max(365).default(365),
+  TLS_SUBJECT_COUNTRY: z.string().default(''),
+  TLS_SUBJECT_STATE: z.string().default(''),
+  TLS_SUBJECT_LOCALITY: z.string().default(''),
+  TLS_SUBJECT_ORGANIZATION: z.string().default(''),
+  TLS_SUBJECT_ORGANIZATIONAL_UNIT: z.string().default(''),
+  TLS_SUBJECT_COMMON_NAME: z.string().default(''),
+  TLS_SUBJECT_EMAIL: z.email().default(''),
 
   /**
-   * pg settings
+   * pg cli settings
    */
   PG_LOG_LEVEL: z.enum(['debug', 'info', 'notice', 'warning', 'error']).default('info'),
   PG_SILENT: z.coerce.boolean().default(NODE_ENV === 'test'),
   PG_API_PORT: z.coerce.number().int().min(80).max(65535).default(3456),
-  PG_WAL_ARCHIVE_DIR: t.absolutePath().default('/wal-archive'),
-  PG_BACKUPS_DIR: t.absolutePath().default('/backups'),
-  PG_DUMPS_DIR: t.absolutePath().default('/dumps'),
-  PG_CERTS_DIR: t.absolutePath().default('/certs'),
+  PG_STATE_DIR: t.absolutePath().default('/var/lib/pg'),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

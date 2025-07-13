@@ -1,7 +1,7 @@
 import { $, sleep } from 'bun';
 import { spawn } from 'node:child_process';
 import { $command, $options } from '../commands';
-import type { Logger } from '../../logger';
+import { type Logger } from '../../logger';
 import { createApi } from '../../api';
 import { s } from '../../utils';
 
@@ -36,10 +36,10 @@ export const start = $command({
     .option('promote', options.promote)
     .option('api', options.api),
   handler: async (argv, ctx) => {
-    const { targetTimestamp, promote } = argv;
+    const { api, promote, targetTimestamp } = argv;
     const { config, logger } = ctx;
 
-    await $`pg certs:install`;
+    await $`pg certs install`;
 
     const cmd = [
       'postgres',
@@ -50,12 +50,12 @@ export const start = $command({
       '-c', 'wal_summary_keep_time=30d',
       '-c', `max_wal_size=${config.POSTGRES_MAX_WAL_SIZE}`,
       '-c', 'archive_mode=on',
-      '-c', 'archive_command=pg archive -p %p -f %f',
-      '-c', 'restore_command=pg unarchive -p %p -f %f',
+      '-c', 'archive_command=pg wal archive -p %p -f %f',
+      '-c', 'restore_command=pg wal unarchive -p %p -f %f',
       '-c', 'ssl=on',
-      '-c', `ssl_ca_file=${config.PG_CERTS_DIR}/root.crt`,
-      '-c', `ssl_cert_file=${config.PG_CERTS_DIR}/server.crt`,
-      '-c', `ssl_key_file=${config.PG_CERTS_DIR}/server.key`,
+      '-c', `ssl_ca_file=${config.PG_STATE_DIR}/root.crt`,
+      '-c', `ssl_cert_file=${config.PG_STATE_DIR}/server.crt`,
+      '-c', `ssl_key_file=${config.PG_STATE_DIR}/server.key`,
       '-c', 'ssl_crl_file=',
       '-c', 'ssl_ciphers=HIGH:MEDIUM:+3DES:!aNULL',
       '-c', 'ssl_prefer_server_ciphers=on',
@@ -101,6 +101,6 @@ export const start = $command({
       .on('SIGTERM', abort)
       .on('SIGKILL', abort);
 
-    await createApi(ctx, ac.signal);
+    if (api) await createApi(ctx, ac.signal);
   },
 });

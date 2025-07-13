@@ -14,19 +14,16 @@ RUN bun run compile
 FROM postgres:17.5-alpine3.22 AS runtime
 
 RUN apk add --no-cache openssl
-RUN mkdir -p /certs \
-    && mkdir -p /downloads \
-    && chown postgres:postgres /certs \
-    && chown postgres:postgres /downloads
 
 COPY --from=build /app/dist/pg /usr/local/bin/pg
 COPY --chown=postgres:postgres ./config/pg_hba.conf.sample /usr/local/share/postgresql/pg_hba.conf.sample
 
 USER postgres
-WORKDIR /var/lib/postgresql
+WORKDIR /var/lib/pg
 
-VOLUME /certs
-VOLUME /downloads
+VOLUME /var/lib/pg
+
+STOPSIGNAL SIGINT
 
 ENTRYPOINT ["pg"]
 CMD ["start"]

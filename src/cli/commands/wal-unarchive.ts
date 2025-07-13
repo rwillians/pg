@@ -16,7 +16,7 @@ const options = $options({
   },
 });
 
-export const unarchive = $command({
+export const walUnarchive = $command({
   signature: 'unarchive',
   describe: 'Unarchives a WAL segment file from S3',
   builder: (cli) => cli
@@ -26,8 +26,8 @@ export const unarchive = $command({
     const { path, filename } = argv;
     const { config, logger, s3 } = ctx;
 
-    const localTar = `${path}.tar.gz`;
-    const remoteFile = s3.file(`${config.PG_WAL_ARCHIVE_DIR}/${filename}.tar.gz`);
+    const localTarPath = `${path}.tar.gz`;
+    const remoteFile = s3.file(`${config.S3_ARCHIVES_PREFIX}/${filename}.tar.gz`);
     const localTarFile = Bun.file(`${path}.tar.gz`);
 
     if (!await remoteFile.exists()) {
@@ -39,7 +39,7 @@ export const unarchive = $command({
     await Bun.write(localTarFile, remoteFile);
 
     logger.debug('Decompressing file');
-    await $`cd ${config.POSTGRES_DATA_DIR} && tar -zxf ${localTar}`.text();
+    await $`cd ${config.POSTGRES_DATA_DIR} && tar -zxf ${localTarPath}`.text();
 
     logger.debug('Deleting temporary files');
     await localTarFile.unlink();

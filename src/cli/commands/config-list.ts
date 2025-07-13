@@ -1,5 +1,5 @@
-import { s } from '../../utils';
 import { $command } from '../commands';
+import { s } from '../../utils';
 
 const REDACTED_FIELDS_INDEX: Record<string, boolean> = {
   POSTGRES_PASSWORD: true,
@@ -19,8 +19,8 @@ const redact = (key: string, value: unknown) => {
   return `${first}${stars}${last}`;
 };
 
-export const listConfigs = $command({
-  signature: 'config:list',
+export const configList = $command({
+  signature: 'ls',
   describe: 'Lists all configurations',
   handler: async (_argv, ctx) => {
     const { config } = ctx;

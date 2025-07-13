@@ -1,12 +1,12 @@
 import { execSync } from 'node:child_process';
 import { $command, $options } from '../commands';
-import { loadState } from '../../state';
+import { Backup } from '../../db/backup';
 import { s } from '../../utils';
 
 const options = $options({
   id: {
     describe: 'The id of the backup to restore',
-    type: 'string',
+    type: 'number',
     demandOption: true,
   },
   force: {
@@ -17,15 +17,15 @@ const options = $options({
   },
 });
 
-export const restoreBackup = $command({
-  signature: 'backup:restore <id>',
+export const backupRestore = $command({
+  signature: 'restore <id>',
   describe: 'Restores the database from backup stored in S3',
   builder: (cli) => cli
     .positional('id', options.id)
     .option('force', options.force),
   handler: async (argv, ctx) => {
     const { id, force } = argv;
-    const { config, logger, s3 } = ctx;
+    const { config, db, logger, s3 } = ctx;
 
     if (!force) {
       logger.warning(`Restoring from a backup is a ${s.bold('DANGEROUS ACTION')} because it will erase all existing data from the database as part of the restoration process`);
@@ -34,8 +34,7 @@ export const restoreBackup = $command({
       process.exit(1);
     }
 
-    const state = await loadState(ctx);
-    const backup = await state.backups.find(id);
+    const backup = await Backup.findOneById(db, id)
 
     if (!backup) {
       logger.error(`Backup ${s.blue(id)} not found`);
