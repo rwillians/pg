@@ -21,8 +21,12 @@ const ConfigSchema = z.object({
   POSTGRES_DB: z.string().min(1),
   POSTGRES_DATA_DIR: t.absolutePath().default('/var/lib/postgresql/data'),
   POSTGRES_MAX_CONNECTIONS: z.coerce.number().int().min(1).default(100),
-  POSTGRES_SHARED_BUFFERS: z.string().default('128MB'),
-  POSTGRES_MAX_WAL_SIZE: z.enum(['16MB', '32MB', '64MB', '128MB', '256MB', '512MB', '1GB']).default('32MB'),
+  POSTGRES_SHARED_BUFFERS: z.string().default('64MB'),
+  //                                           ↑
+  //                        if running in docker then make sure to
+  //                  to set `--shm-size` to at least this value as this,
+  //                    e.g.: `docker run --shm-size=64MB rwillians/pg`
+  POSTGRES_MAX_WAL_SIZE: z.enum(['16MB', '32MB', '64MB', '128MB', '256MB', '512MB', '1GB']).default('64MB'),
 
   /**
    * s3-compatible settings
