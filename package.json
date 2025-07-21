@@ -16,7 +16,7 @@
     "zod": "^3.25.71"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.18",
+    "@types/bun": "^1.2.19",
     "@types/yargs": "^17.0.33"
   },
   "peerDependencies": {
