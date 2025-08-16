@@ -9,6 +9,7 @@ import { certsInstall } from './cli/commands/certs-install';
 import { configList } from './cli/commands/config-list';
 import { dumpDownload } from './cli/commands/dump-download';
 import { dumpImport } from './cli/commands/dump-import';
+import { dumpLink } from './cli/commands/dump-link';
 import { dumpList } from './cli/commands/dump-list';
 import { dumpNew } from './cli/commands/dump-new';
 import { dumpRestore } from './cli/commands/dump-restore';
@@ -39,6 +40,7 @@ pg.command('config', 'Manage configurations', (cli) => cli
 pg.command('dump', 'Manage database dumps', (cli) => cli
   .command(dumpNew())
   .command(dumpImport())
+  .command(dumpLink())
   .command(dumpList())
   .command(dumpDownload())
   .command(dumpRestore())

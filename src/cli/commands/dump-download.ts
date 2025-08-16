@@ -12,7 +12,7 @@ const options = $options({
 });
 
 export const dumpDownload = $command({
-  signature: 'dump:download <id>',
+  signature: 'download <id>',
   describe: 'Downloads a dump from S3 into the current directory',
   builder: (cli) => cli.positional('id', options.id),
   handler: async (argv, ctx) => {
