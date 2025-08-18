@@ -13,7 +13,7 @@ RUN bun run compile
 
 FROM postgres:17.5-alpine3.22 AS runtime
 
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl tini
 
 COPY --from=build /app/dist/pg /usr/local/bin/pg
 COPY --chown=postgres:postgres ./config/pg_hba.conf.sample /usr/local/share/postgresql/pg_hba.conf.sample
@@ -25,5 +25,5 @@ VOLUME /var/lib/pg
 
 STOPSIGNAL SIGINT
 
-ENTRYPOINT ["pg"]
+ENTRYPOINT ["tini", "--", "pg"]
 CMD ["start"]
