@@ -25,9 +25,11 @@ export const dumpLink = $command({
       process.exit(1);
     }
 
-    console.log(s3.presign(dump.path, {
+    const file = s3.file(dump.path);
+
+    console.log(file.presign({
       expiresIn: 3600,
-      acl: 'public-read',
+      acl: 'public-read'
     }));
   },
 });
