@@ -13,7 +13,8 @@ import { dumpLink } from './cli/commands/dump-link';
 import { dumpList } from './cli/commands/dump-list';
 import { dumpNew } from './cli/commands/dump-new';
 import { dumpRestore } from './cli/commands/dump-restore';
-import { stateBackup } from './cli/commands/state-backup';
+import { statePull } from './cli/commands/state-pull';
+import { statePush } from './cli/commands/state-push';
 import { walArchive } from './cli/commands/wal-archive';
 import { walStats } from './cli/commands/wal-stats';
 import { walUnarchive } from './cli/commands/wal-unarchive';
@@ -46,7 +47,8 @@ pg.command('dump', 'Manage database dumps', (cli) => cli
   .command(dumpRestore())
 );
 pg.command('state', 'Manage the cli internal state', (cli) => cli
-  .command(stateBackup())
+  .command(statePush())
+  .command(statePull())
 );
 pg.command('wal', 'Manage WAL segment archives', (cli) => cli
   .command(walArchive())
