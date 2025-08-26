@@ -5,10 +5,10 @@
       "name": "pg",
       "dependencies": {
         "yargs": "^18.0.0",
-        "zod": "^3.25.71",
+        "zod": "^4.1.1",
       },
       "devDependencies": {
-        "@types/bun": "^1.2.18",
+        "@types/bun": "^1.2.20",
         "@types/yargs": "^17.0.33",
       },
       "peerDependencies": {
@@ -61,6 +61,6 @@
 
     "yargs-parser": ["yargs-parser@22.0.0", "", {}, "sha512-rwu/ClNdSMpkSrUb+d6BRsSkLUq1fmfsY6TOpYzTwvwkg1/NRG85KBy3kq++A8LKQwX6lsu+aWad+2khvuXrqw=="],
 
-    "zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+    "zod": ["zod@4.1.1", "", {}, "sha512-SgMZK/h8Tigt9nnKkfJMvB/mKjiJXaX26xegP4sa+0wHIFVFWVlsQGdhklDmuargBD3Hsi3rsQRIzwJIhTPJHA=="],
   }
 }
