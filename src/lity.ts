@@ -126,8 +126,8 @@ export type InferRowForInsert<T extends Table> = {
  * Infers the shape of a table's row with only the given selected
  * columns.
  */
-type InferSelected<T extends Table, S> = {
-  [K in keyof T & string as K extends S ? K : never]: z.infer<T[K]['schema']>
+type InferSelected<T extends Table, S extends Column[]> = {
+  [K in keyof T & string as K extends S[number]['field'] ? K : never]: z.infer<T[K]['schema']>
 };
 
 /**
@@ -385,6 +385,25 @@ const createDecoder = (cols: Column[]) => (row: any) => {
 /**
  * @private
  *
+ * Condition builders.
+ */
+const criteria = {
+  eq: (lhs: Expr, rhs: Expr) => ({ lhs, op: '=', rhs } as ExprEq),
+  neq: (lhs: Expr, rhs: Expr) => ({ lhs, op: '!=', rhs } as ExprNeq),
+  lt: (lhs: Expr, rhs: Expr) => ({ lhs, op: '<', rhs } as ExprLt),
+  lte: (lhs: Expr, rhs: Expr) => ({ lhs, op: '<=', rhs } as ExprLte),
+  gt: (lhs: Expr, rhs: Expr) => ({ lhs, op: '>', rhs } as ExprGt),
+  gte: (lhs: Expr, rhs: Expr) => ({ lhs, op: '>=', rhs } as ExprGte),
+  like: (lhs: Expr, rhs: Expr) => ({ lhs, op: 'LIKE', rhs } as ExprLike),
+  in: (lhs: Expr, rhs: Expr[]) => ({ lhs, op: 'IN', rhs } as ExprIn),
+  and: (exprs: Expr[]) => ({ and: exprs } as ExprAnd),
+  or: (exprs: Expr[]) => ({ or: exprs } as ExprOr),
+  not: (expr: Expr) => ({ not: expr } as ExprNot),
+};
+
+/**
+ * @private
+ *
  * Narrows an expression type.
  */
 const is = {
@@ -397,15 +416,15 @@ const is = {
   gte: (expr: Expr): expr is ExprGte => (expr as any).op === '>=',
   like: (expr: Expr): expr is ExprLike => (expr as any).op === 'LIKE',
   in: (expr: Expr): expr is ExprIn => (expr as any).op === 'IN',
-  and: (expr: Expr): expr is ExprAnd => (expr as any).op === 'AND',
-  or: (expr: Expr): expr is ExprOr => (expr as any).op === 'OR',
-  not: (expr: Expr): expr is ExprNot => (expr as any).op === 'NOT',
+  and: (expr: Expr): expr is ExprAnd => Array.isArray((expr as any).and),
+  or: (expr: Expr): expr is ExprOr => Array.isArray((expr as any).or),
+  not: (expr: Expr): expr is ExprNot => !!(expr as any).not,
 };
 
 /**
  * @private
  *
- * Renders where clause expressions.
+ * Renders where clause expressions to SQL.
  */
 const render = {
   any: (expr: Expr) => {
@@ -448,6 +467,7 @@ const render = {
     if (typeof [value] === 'string') return ['?', [value]] as const;
     if (typeof value === 'boolean') return ['?', [value ? 1 : 0]] as const;
     if (value instanceof Date) return ['?', [value.valueOf()]] as const;
+    if (Array.isArray(value)) return ['(' + value.map(() => '?').join(', ') + ')', value] as const;
     throw new Error(`cannot render literal of type ${typeof value}`);
   },
   not: ({ not: expr }: ExprNot) => {
@@ -466,25 +486,6 @@ const render = {
 
     return [`(${frags.join(' OR ')})`, params] as const;
   },
-};
-
-/**
- * @private
- *
- * Condition builders.
- */
-const c = {
-  eq: (lhs: Expr, rhs: Expr) => ({ lhs, op: '=', rhs } as ExprEq),
-  neq: (lhs: Expr, rhs: Expr) => ({ lhs, op: '!=', rhs } as ExprNeq),
-  lt: (lhs: Expr, rhs: Expr) => ({ lhs, op: '<', rhs } as ExprLt),
-  lte: (lhs: Expr, rhs: Expr) => ({ lhs, op: '<=', rhs } as ExprLte),
-  gt: (lhs: Expr, rhs: Expr) => ({ lhs, op: '>', rhs } as ExprGt),
-  gte: (lhs: Expr, rhs: Expr) => ({ lhs, op: '>=', rhs } as ExprGte),
-  like: (lhs: Expr, rhs: Expr) => ({ lhs, op: 'LIKE', rhs } as ExprLike),
-  in: (lhs: Expr, rhs: Expr) => ({ lhs, op: 'IN', rhs } as ExprIn),
-  and: (...exprs: Expr[]) => ({ and: exprs } as ExprAnd),
-  or: (...exprs: Expr[]) => ({ or: exprs } as ExprOr),
-  not: (expr: Expr) => ({ not: expr } as ExprNot),
 };
 
 /**
@@ -593,8 +594,8 @@ class QueryBuilder<T extends Table, S extends Column[]> {
     this.#selection = selection;
   }
 
-  select<C extends Column[]>(cols: C) {
-    const q = new QueryBuilder<T, C>(this.#table, cols);
+  select<C extends Column[]>(cols: C): QueryBuilder<T, C> {
+    const q = new QueryBuilder(this.#table, cols);
 
     q.#where = this.#where;
     q.#orderBy = this.#orderBy;
@@ -604,23 +605,38 @@ class QueryBuilder<T extends Table, S extends Column[]> {
     return q;
   }
 
-  where(fn: (criteria: typeof c) => Expr) {
-    this.#where = fn(c);
+  where(fn: (c: typeof criteria) => Expr): this {
+    this.#where = fn(criteria);
     return this;
   }
 
-  orderBy<O extends [Column, SQLiteSortDirection]>(sort: O[]) {
+  orderBy<O extends [Column, SQLiteSortDirection]>(sort: O[]): this {
     this.#orderBy = sort;
     return this;
   }
 
-  limit(limit: number) {
+  limit(limit: number): this {
     this.#limit = limit;
     return this;
   }
 
-  offset(offset: number) {
+  offset(offset: number): this {
     this.#offset = offset;
+    return this;
+  }
+
+  inspect(): this {
+    const [sql, params] = statement.query({
+      table: this.#table,
+      selection: this.#selection,
+      where: this.#where,
+      orderBy: this.#orderBy,
+      limit: this.#limit,
+      offset: this.#offset,
+    });
+
+    console.log('[DEBUG]', sql, params);
+
     return this;
   }
 
@@ -636,7 +652,7 @@ class QueryBuilder<T extends Table, S extends Column[]> {
 
     const results = db.prepare(sql).all(...params);
 
-    return parse(results) as Expand<InferSelected<T, S[number]['field']>>[];
+    return parse(results) as Expand<InferSelected<T, S>>[];
   }
 }
 

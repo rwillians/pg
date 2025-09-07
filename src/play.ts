@@ -10,7 +10,6 @@ const archives = table('archives', {
 
 type Foo = InferRow<typeof archives>;
 
-
 (async () => {
   const config = parseConfig(process.env);
   const db = await connect(`${config.PG_STATE_DIR}/db-v2.sqlite`);
@@ -26,10 +25,10 @@ type Foo = InferRow<typeof archives>;
   console.log('insert:', data);
 
   const rows = await from(archives)
-    .where(c => c.gt(archives.size, 100))
-    .limit(9)
-    .offset(1)
-    // .select([archives.id, archives.tar])
+    .where(c => c.and([
+      c.gt(archives.size, 1233),
+      c.in(archives.id, [1, 2])
+    ]))
     .run(db);
 
   console.log('query:', rows);
