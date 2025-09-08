@@ -95,13 +95,13 @@ export const certsInstall = $command({
   handler: async (_argv, ctx) => {
     const { config, logger, s3 } = ctx;
 
-    const certs = await resolve(ctx);
-    if (await md5(crt(ctx)) === certs.md5) return;
+    const cert = await resolve(ctx);
+    if (await md5(crt(ctx)) === cert.md5) return;
 
     logger.debug('Downloading TLS certificates from S3');
-    await Bun.write(Bun.file(key(ctx)), s3.file(certs.key));
-    await Bun.write(Bun.file(crt(ctx)), s3.file(certs.crt));
-    await Bun.write(Bun.file(ca(ctx)), s3.file(certs.ca));
+    await Bun.write(Bun.file(key(ctx)), s3.file(cert.key));
+    await Bun.write(Bun.file(crt(ctx)), s3.file(cert.crt));
+    await Bun.write(Bun.file(ca(ctx)), s3.file(cert.ca));
 
     logger.debug('Setting permissions for TLS certificates');
     await $`chmod 400 ${key(ctx)}`;

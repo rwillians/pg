@@ -17,24 +17,24 @@ const getPreviousBackupInfo = async (ctx: Context, incremental: boolean) => {
   }
 
   logger.debug('Looking for the a parent incremental backup');
-  const lastBackup = await from(backups)
+  const parentBackup = await from(backups)
     .orderBy([[backups.completedAt, 'DESC']])
     .limit(1)
     .one(db);
 
-  if (!lastBackup) {
+  if (!parentBackup) {
     logger.debug('No parent incremental backup found');
     return [null, undefined] as const;
   }
 
   const localManifestPath = `/tmp/${randomUUIDv7()}`;
   const localFile = Bun.file(localManifestPath);
-  const remoteFile = s3.file((lastBackup as any).manifest);
+  const remoteFile = s3.file(parentBackup.manifest);
 
   logger.debug(`Downloading the parent backup's manifest`);
   await Bun.write(localFile, remoteFile);
 
-  return [lastBackup.id, localManifestPath] as const;
+  return [parentBackup.id, localManifestPath] as const;
 };
 
 const run = (logger: Logger, { fast, backupPath, previousManifestPath }: Record<string, any>) => {
@@ -109,9 +109,6 @@ export const backupNew = $command({
 
     const elapsed = Math.round((performance.now() - start) / 1000);
 
-    logger.debug('Deleting temporary files');
-    execSync(`rm -rf /tmp/${tempId}`);
-
     //
 
     const tar = remotePath;
@@ -127,6 +124,11 @@ export const backupNew = $command({
       logger.error('Failed to create backup record in the state database');
       return process.exit(1);
     }
+
+    //
+
+    logger.debug('Deleting temporary files');
+    execSync(`rm -rf /tmp/${tempId}`);
 
     logger.info(`Backup ${s.blue(backup.id)} created successfully! Took ${elapsed}s`);
   },

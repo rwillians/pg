@@ -56,6 +56,6 @@ export const walArchive = $command({
     logger.debug('Deleting temporary files');
     await localTarFile.unlink();
 
-    logger.info(`WAL file ${s.blue(filename)} successfully archived to S3`)
+    logger.info(`File ${s.blue(filename)} successfully archived to S3`)
   },
 });
