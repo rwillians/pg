@@ -3,8 +3,10 @@ import { $, randomUUIDv7 } from 'bun';
 import { execSync } from 'node:child_process';
 import { $command, $options } from '../commands';
 import type { Context } from '../../context';
-import { Dump } from '../../db-v1/dump';
 import { s } from '../../utils';
+
+import { dumps } from '../../db-v2/dumps';
+import { from } from '../../db-v2';
 
 const deleteTempFiles = (ctx: Context, path: string) => async () => {
   const { logger } = ctx;
@@ -18,11 +20,13 @@ const deleteTempFiles = (ctx: Context, path: string) => async () => {
 const s3Downloader = (ctx: Context, id: number) => async () => {
   const { db, logger, s3 } = ctx;
 
-  const dump = await Dump.findOneById(db, id);
+  const dump = await from(dumps)
+    .where(c => c.eq(dumps.id, id))
+    .one(db);
 
   if (!dump) {
     logger.error(`Dump ${s.blue(id)} not found`);
-    process.exit(1);
+    return process.exit(1);
   }
 
   const s3File = s3.file(dump.path);
@@ -30,7 +34,7 @@ const s3Downloader = (ctx: Context, id: number) => async () => {
 
   if (!await s3File.exists()) {
     logger.error(`Dump file not found at ${s.red(s3Url)}`);
-    process.exit(1);
+    return process.exit(1);
   }
 
   logger.debug(`Downloading dump from ${s.blue(s3Url)}`);
