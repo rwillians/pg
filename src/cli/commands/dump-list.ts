@@ -1,14 +1,16 @@
 import { withHumanReadableSize } from '../../utils';
 import { $command } from '../commands';
-import { Dump } from '../../db-v1/dump';
+
+import { dumps } from '../../db-v2/dumps';
+import { from } from '../../db-v2';
 
 export const dumpList = $command({
   signature: 'ls',
   describe: 'Lists all dumps available',
   handler: async (_argv, ctx) => {
     const { db } = ctx;
-    const dumps = await Dump.all(db);
+    const rows = await from(dumps).all(db);
 
-    console.table(dumps.map(withHumanReadableSize));
+    console.table(rows.map(withHumanReadableSize));
   },
 });
