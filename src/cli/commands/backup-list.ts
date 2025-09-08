@@ -1,6 +1,7 @@
 import { withHumanReadableSize } from '../../utils';
-import { backups } from '../../db/backups';
 import { $command } from '../commands';
+
+import { backups } from '../../db/backups';
 import { from } from '../../db';
 
 export const backupList = $command({
