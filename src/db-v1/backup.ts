@@ -1,4 +1,4 @@
-import { model, t } from '../db';
+import { model, t } from '../db-v1';
 
 export const Backup = model('backups', {
   id: t.pk(),
