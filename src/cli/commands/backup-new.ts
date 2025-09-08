@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 import { $command, $options } from '../commands';
 import { type Context } from '../../context';
 import { type Logger } from '../../logger';
-import { Backup } from '../../db/backup';
+import { Backup } from '../../db-v1/backup';
 import { s } from '../../utils';
 
 const getPreviousBackupInfo = async (ctx: Context, incremental: boolean) => {

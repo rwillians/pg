@@ -1,7 +1,7 @@
 import { statSync } from 'node:fs';
 import { randomUUIDv7 } from 'bun';
 import { $command, $options } from '../commands';
-import { Dump } from '../../db/dump';
+import { Dump } from '../../db-v1/dump';
 import { s } from '../../utils';
 
 const options = $options({

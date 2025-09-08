@@ -1,5 +1,5 @@
 import { humanReadableSize, sumBy } from '../../utils';
-import { Archive } from '../../db/archive';
+import { Archive } from '../../db-v1/archive';
 import { $command } from '../commands';
 
 export const walStats = $command({

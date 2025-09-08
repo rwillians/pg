@@ -3,7 +3,7 @@ import { $, randomUUIDv7 } from 'bun';
 import { execSync } from 'node:child_process';
 import { $command, $options } from '../commands';
 import type { Context } from '../../context';
-import { Dump } from '../../db/dump';
+import { Dump } from '../../db-v1/dump';
 import { s } from '../../utils';
 
 const deleteTempFiles = (ctx: Context, path: string) => async () => {

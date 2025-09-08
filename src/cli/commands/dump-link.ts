@@ -1,5 +1,5 @@
 import { $command, $options } from '../commands';
-import { Dump } from '../../db/dump';
+import { Dump } from '../../db-v1/dump';
 import { s } from '../../utils';
 
 const options = $options({

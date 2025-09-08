@@ -1,7 +1,7 @@
 import { $ } from 'bun';
 import { statSync } from 'node:fs';
 import { $command, $options } from '../commands';
-import { Archive } from '../../db/archive';
+import { Archive } from '../../db-v1/archive';
 import { s } from '../../utils';
 
 const options = $options({

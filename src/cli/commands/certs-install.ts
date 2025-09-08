@@ -1,7 +1,7 @@
 import { $, randomUUIDv7 } from 'bun';
 import type { Context } from '../../context';
 import { $command } from '../commands';
-import { Certs } from '../../db/certs';
+import { Certs } from '../../db-v1/certs';
 
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
 
