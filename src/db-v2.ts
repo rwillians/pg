@@ -114,7 +114,7 @@ export type Infer<T extends Table> = {
  * Infers the shape of a table's row with only the given selected
  * columns.
  */
-type InferWithSelection<T extends Table, S extends Column[]> = Pick<Infer<T>, S[number]['field']>;
+// type InferWithSelection<T extends Table, S extends Column[]> = Pick<Infer<T>, S[number]['field']>;
 
 /**
  * @private
@@ -579,28 +579,15 @@ const statement = {
  *
  * Query builder.
  */
-class QueryBuilder<T extends Table, S extends Column[]> {
+class QueryBuilder<T extends Table> {
   #table: T;
-  #selection: S;
   #where?: Expr;
   #orderBy: [Column, SQLiteSortDirection][] = [];
   #limit?: number;
   #offset?: number;
 
-  constructor(table: T, selection: S) {
+  constructor(table: T) {
     this.#table = table;
-    this.#selection = selection;
-  }
-
-  select<C extends Column[]>(cols: C): QueryBuilder<T, C> {
-    const q = new QueryBuilder(this.#table, cols);
-
-    q.#where = this.#where;
-    q.#orderBy = this.#orderBy;
-    q.#limit = this.#limit;
-    q.#offset = this.#offset;
-
-    return q;
   }
 
   where(fn: (c: typeof criteria) => Expr): this {
@@ -624,9 +611,11 @@ class QueryBuilder<T extends Table, S extends Column[]> {
   }
 
   inspect(): this {
+    const { [NAME]: _name, ...columns } = this.#table;
+
     const [sql, params] = statement.query({
       table: this.#table,
-      selection: this.#selection,
+      selection: Object.values(columns),
       where: this.#where,
       orderBy: this.#orderBy,
       limit: this.#limit,
@@ -639,9 +628,11 @@ class QueryBuilder<T extends Table, S extends Column[]> {
   }
 
   async run(db: Database) {
+    const { [NAME]: _name, ...columns } = this.#table;
+
     const [sql, params, parse] = statement.query({
       table: this.#table,
-      selection: this.#selection,
+      selection: Object.values(columns),
       where: this.#where,
       orderBy: this.#orderBy,
       limit: this.#limit,
@@ -650,7 +641,7 @@ class QueryBuilder<T extends Table, S extends Column[]> {
 
     const results = db.prepare(sql).all(...params);
 
-    return parse(results) as Expand<InferWithSelection<T, S>>[];
+    return parse(results) as Expand<Infer<T>>[];
   }
 }
 
@@ -883,10 +874,7 @@ export const into = <T extends Table>(table: T) => ({
  *
  * Starts a query builder from the given table.
  */
-export const from = <T extends Table>(table: T) => {
-  const { [NAME]: _n, ...columns } = table;
-  return new QueryBuilder(table, Object.values(columns));
-};
+export const from = <T extends Table>(table: T) => new QueryBuilder(table);
 
 /**
  * Defines a table.
