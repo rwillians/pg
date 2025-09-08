@@ -5,6 +5,7 @@ import { start } from './cli/commands/start';
 import { backupList } from './cli/commands/backup-list';
 import { backupNew } from './cli/commands/backup-new';
 import { backupRestore } from './cli/commands/backup-restore';
+import { busybox } from './cli/commands/busybox';
 import { certsInstall } from './cli/commands/certs-install';
 import { configList } from './cli/commands/config-list';
 import { dumpDownload } from './cli/commands/dump-download';
@@ -32,6 +33,7 @@ pg.command('backup', 'Manage base backups', (cli) => cli
   .command(backupList())
   .command(backupRestore())
 );
+pg.command(busybox());
 pg.command('certs', 'Manage TLS certificates', (cli) => cli
   .command(certsInstall())
 );
