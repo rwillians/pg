@@ -14,6 +14,7 @@ import { dumpLink } from './cli/commands/dump-link';
 import { dumpList } from './cli/commands/dump-list';
 import { dumpNew } from './cli/commands/dump-new';
 import { dumpRestore } from './cli/commands/dump-restore';
+import { stateImportV2 } from './cli/commands/state-import-v2';
 import { statePull } from './cli/commands/state-pull';
 import { statePush } from './cli/commands/state-push';
 import { walArchive } from './cli/commands/wal-archive';
@@ -49,6 +50,7 @@ pg.command('dump', 'Manage database dumps', (cli) => cli
   .command(dumpRestore())
 );
 pg.command('state', 'Manage the cli internal state', (cli) => cli
+  .command(stateImportV2())
   .command(statePush())
   .command(statePull())
 );

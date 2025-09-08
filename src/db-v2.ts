@@ -59,8 +59,8 @@ export type Codec<A = any, B = any> = {
  *
  * The shape of a column that's passed to {@link table} function.
  */
-export type ColumnShape = {
-  schema: z.ZodType;
+export type ColumnShape<T extends z.ZodType = z.ZodType> = {
+  schema: T;
   type: SQLiteDataType;
   codec: Codec;
   primaryKey?: true;
@@ -114,9 +114,7 @@ export type Infer<T extends Table> = {
  * Infers the shape of a table's row with only the given selected
  * columns.
  */
-type InferWithSelection<T extends Table, S extends Column[]> = {
-  [K in keyof T & string as K extends S[number]['field'] ? K : never]: z.infer<T[K]['schema']>
-};
+type InferWithSelection<T extends Table, S extends Column[]> = Pick<Infer<T>, S[number]['field']>;
 
 /**
  * @private
@@ -715,11 +713,11 @@ export const t = {
   /**
    * Makes a column nullable.
    */
-  nullable: <T extends ColumnShape>(shape: T) => ({
+  nullable: <T extends z.ZodType>(shape: ColumnShape<T>) => ({
     ...shape,
     schema: shape.schema.nullable().default(null),
     nullable: true,
-  }) satisfies T & { nullable: true },
+  }) as const,
   /**
    * Defines a blob column.
    */
