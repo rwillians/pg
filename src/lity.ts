@@ -104,20 +104,8 @@ export type Table<T extends TableShape = TableShape> = {
  *
  * Infers the type of a row in the table, with all its columns.
  */
-export type InferRow<T extends Table> = {
+export type Infer<T extends Table> = {
   [K in keyof T & string]: z.infer<T[K]['schema']>;
-};
-
-/**
- * @private
- *
- * Infers the shape of a row to be inserted into a table.
- *
- * This differs from {@link InferRow} in that it excludes
- * generated columns such as the auto-incrementing ones.
- */
-export type InferRowForInsert<T extends Table> = {
-  [K in keyof T & string as T[K] extends { autoincrement: true } ? never : K]: z.infer<T[K]['schema']>;
 };
 
 /**
@@ -126,8 +114,20 @@ export type InferRowForInsert<T extends Table> = {
  * Infers the shape of a table's row with only the given selected
  * columns.
  */
-type InferSelected<T extends Table, S extends Column[]> = {
+type InferWithSelection<T extends Table, S extends Column[]> = {
   [K in keyof T & string as K extends S[number]['field'] ? K : never]: z.infer<T[K]['schema']>
+};
+
+/**
+ * @private
+ *
+ * Infers the shape of a row to be inserted into a table.
+ *
+ * This differs from {@link Infer} in that it excludes generated
+ * columns such as the auto-incrementing ones.
+ */
+export type InferForInsert<T extends Table> = {
+  [K in keyof T & string as T[K] extends { autoincrement: true } ? never : K]: z.infer<T[K]['schema']>;
 };
 
 /**
@@ -652,7 +652,7 @@ class QueryBuilder<T extends Table, S extends Column[]> {
 
     const results = db.prepare(sql).all(...params);
 
-    return parse(results) as Expand<InferSelected<T, S>>[];
+    return parse(results) as Expand<InferWithSelection<T, S>>[];
   }
 }
 
@@ -851,12 +851,12 @@ export const into = <T extends Table>(table: T) => ({
   /**
    * Puts the given rows into the insert statement.
    */
-  insert: <S extends Expand<InferRowForInsert<T>>>(rows: S[]) => ({
+  insert: <S extends Expand<InferForInsert<T>>>(rows: S[]) => ({
     /**
      * Executes the insert statement against the database.
      */
     run: async (db: Database) => {
-      if (rows.length === 0) return [] as Expand<InferRow<T>>[];
+      if (rows.length === 0) return [] as Expand<Infer<T>>[];
 
       const { [NAME]: _n, ...columns } = table;
 
@@ -875,7 +875,7 @@ export const into = <T extends Table>(table: T) => ({
       const [sql, params, parse] = statement.insert(table, data);
       const results = db.prepare(sql).all(...params);
 
-      return parse(results) as Expand<InferRow<T>>[];
+      return parse(results) as Expand<Infer<T>>[];
     },
   }),
 });
