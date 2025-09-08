@@ -1,12 +1,12 @@
 import { S3Client } from 'bun';
 import { createLogger } from './logger';
 import { parseConfig } from './config';
-import { connect, setup } from './db-v2';
+import { connect, setup } from './db';
 
-import { archives } from './db-v2/archives';
-import { backups } from './db-v2/backups';
-import { certs } from './db-v2/certs';
-import { dumps } from './db-v2/dumps';
+import { archives } from './db/archives';
+import { backups } from './db/backups';
+import { certs } from './db/certs';
+import { dumps } from './db/dumps';
 
 export const createContext = async (env: Bun.Env) => {
   const config = parseConfig(env);
@@ -23,7 +23,7 @@ export const createContext = async (env: Bun.Env) => {
     region: config.S3_REGION,
   });
 
-  const db = await connect(`${config.PG_STATE_DIR}/db-v2.sqlite`);
+  const db = await connect(`${config.PG_STATE_DIR}/db.sqlite`, logger);
   await setup(db, [archives, backups, certs, dumps]);
 
   return {

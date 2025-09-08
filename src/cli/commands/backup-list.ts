@@ -1,7 +1,7 @@
 import { withHumanReadableSize } from '../../utils';
-import { backups } from '../../db-v2/backups';
+import { backups } from '../../db/backups';
 import { $command } from '../commands';
-import { from } from '../../db-v2';
+import { from } from '../../db';
 
 export const backupList = $command({
   signature: 'ls',

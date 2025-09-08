@@ -6,8 +6,8 @@ import { type Context } from '../../context';
 import { type Logger } from '../../logger';
 import { s } from '../../utils';
 
-import { backups } from '../../db-v2/backups';
-import { from, into } from '../../db-v2';
+import { backups } from '../../db/backups';
+import { from, into } from '../../db';
 
 const getPreviousBackupInfo = async (ctx: Context, incremental: boolean) => {
   const { db, logger, s3 } = ctx;

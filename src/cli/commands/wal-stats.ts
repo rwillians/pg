@@ -1,8 +1,8 @@
 import { humanReadableSize, sumBy } from '../../utils';
 import { $command } from '../commands';
 
-import { archives } from '../../db-v2/archives';
-import { from } from '../../db-v2';
+import { archives } from '../../db/archives';
+import { from } from '../../db';
 
 export const walStats = $command({
   signature: 'stats',

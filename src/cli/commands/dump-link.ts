@@ -1,8 +1,8 @@
 import { $command, $options } from '../commands';
 import { s } from '../../utils';
 
-import { dumps } from '../../db-v2/dumps';
-import { from } from '../../db-v2';
+import { dumps } from '../../db/dumps';
+import { from } from '../../db';
 
 const options = $options({
   id: {

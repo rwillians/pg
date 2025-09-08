@@ -1,8 +1,8 @@
 import { withHumanReadableSize } from '../../utils';
 import { $command } from '../commands';
 
-import { dumps } from '../../db-v2/dumps';
-import { from } from '../../db-v2';
+import { dumps } from '../../db/dumps';
+import { from } from '../../db';
 
 export const dumpList = $command({
   signature: 'ls',

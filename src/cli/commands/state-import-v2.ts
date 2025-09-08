@@ -1,6 +1,6 @@
 import { connect as connectV1 } from '../../db-v1';
 import { $command } from '../commands';
-import { into } from '../../db-v2';
+import { into } from '../../db';
 import { s } from '../../utils';
 
 import { Archive } from '../../db-v1/archive';
@@ -8,10 +8,10 @@ import { Backup } from '../../db-v1/backup';
 import { Certs } from '../../db-v1/certs';
 import { Dump } from '../../db-v1/dump';
 
-import { archives } from '../../db-v2/archives';
-import { backups } from '../../db-v2/backups';
-import { certs } from '../../db-v2/certs';
-import { dumps } from '../../db-v2/dumps';
+import { archives } from '../../db/archives';
+import { backups } from '../../db/backups';
+import { certs } from '../../db/certs';
+import { dumps } from '../../db/dumps';
 
 export const stateImportV2 = $command({
   signature: 'import:v2',

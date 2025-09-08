@@ -3,8 +3,8 @@ import type { Context } from '../../context';
 import { $command } from '../commands';
 import { fromNow } from '../../utils';
 
-import { certs } from '../../db-v2/certs';
-import { from, into } from '../../db-v2';
+import { certs } from '../../db/certs';
+import { from, into } from '../../db';
 
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
 

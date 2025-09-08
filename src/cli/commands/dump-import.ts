@@ -3,8 +3,8 @@ import { randomUUIDv7 } from 'bun';
 import { $command, $options } from '../commands';
 import { s } from '../../utils';
 
-import { dumps } from '../../db-v2/dumps';
-import { into } from '../../db-v2';
+import { dumps } from '../../db/dumps';
+import { into } from '../../db';
 
 const options = $options({
   file: {

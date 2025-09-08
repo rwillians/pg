@@ -238,7 +238,7 @@ export const extend = <
 export type { Database } from 'bun:sqlite';
 
 export const connect = async (config: Config) => {
-  const path = `${config.PG_STATE_DIR}/db.sqlite`;
+  const path = `${config.PG_STATE_DIR}/db-v1.sqlite`;
   if (!await Bun.file(path).exists()) await $`touch ${path}`;
 
   return new Database(path);

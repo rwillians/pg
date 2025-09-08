@@ -1,4 +1,4 @@
-import { type Infer, t, table } from '../db-v2';
+import { type Infer, t, table } from '../db';
 
 export const archives = table('archives', {
   id: t.id(),

@@ -5,8 +5,8 @@ import { $command, $options } from '../commands';
 import type { Context } from '../../context';
 import { s } from '../../utils';
 
-import { dumps } from '../../db-v2/dumps';
-import { from } from '../../db-v2';
+import { dumps } from '../../db/dumps';
+import { from } from '../../db';
 
 const deleteTempFiles = (ctx: Context, path: string) => async () => {
   const { logger } = ctx;

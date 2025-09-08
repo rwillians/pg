@@ -2,8 +2,8 @@ import { execSync } from 'node:child_process';
 import { $command, $options } from '../commands';
 import { s } from '../../utils';
 
-import { backups } from '../../db-v2/backups';
-import { from } from '../../db-v2';
+import { backups } from '../../db/backups';
+import { from } from '../../db';
 
 const options = $options({
   id: {

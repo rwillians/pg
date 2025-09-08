@@ -3,8 +3,8 @@ import { statSync } from 'node:fs';
 import { $command, $options } from '../commands';
 import { s } from '../../utils';
 
-import { archives } from '../../db-v2/archives';
-import { into } from '../../db-v2';
+import { archives } from '../../db/archives';
+import { into } from '../../db';
 
 const options = $options({
   path: {
