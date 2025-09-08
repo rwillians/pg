@@ -1,6 +1,6 @@
+import { Database as SQLiteDatabase } from 'bun:sqlite';
 import { isAbsolute } from 'node:path';
 import { inspect } from 'node:util';
-import { Database } from 'bun:sqlite';
 import { z } from 'zod/v4';
 import type { Logger } from './logger';
 
@@ -47,11 +47,25 @@ type Stats = {
   start?: number;
   end?: number;
   elapsed?: number;
-}
+};
+
+/**
+ * @private
+ *
+ * The result of rendering a where clause expression to SQL.
+ */
+type ExprResult = [sql: string, params: (string | number | null)[]];
 
 //////////////////////////////////////////////////////////////////////
 ///                          PUBLIC TYPES                          ///
 //////////////////////////////////////////////////////////////////////
+
+/**
+ * @public
+ *
+ * Custom Database type that includes a logger.
+ */
+export type Database = SQLiteDatabase & { logger: Logger };
 
 /**
  * @public
@@ -90,6 +104,7 @@ export type ColumnShape<T extends z.ZodType = z.ZodType> = {
 export type Column<T extends ColumnShape = ColumnShape> = T & {
   name: string;  // ← name in the database
   field: string; // ← name in the code
+  table: string; // ← name of the table the column belongs to
 };
 
 /**
@@ -153,7 +168,7 @@ type ExprEq = { lhs: Expr, op: '=', rhs: Expr };
  *
  * Not equal expression.
  */
-type ExprNeq = { lhs: Expr, op: '!=', rhs: Expr };
+type ExprNe = { lhs: Expr, op: '!=', rhs: Expr };
 
 /**
  * @private
@@ -233,7 +248,7 @@ type ExprLiteral = any;
 type Expr =
   Column
   | ExprEq
-  | ExprNeq
+  | ExprNe
   | ExprLt
   | ExprLte
   | ExprGt
@@ -250,9 +265,9 @@ type Expr =
  *
  * All binary expression types.
  */
-type ExprBinary =
+type ExprBinaryOp =
   ExprEq
-  | ExprNeq
+  | ExprNe
   | ExprLt
   | ExprLte
   | ExprGt
@@ -304,13 +319,14 @@ const snake = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowe
 /**
  * @private
  *
- * Puts the name and field into a {@link ColumnShape}, turning it into
- * a {@link Column}.
+ * Puts the name and field and the name of the table into a
+ * {@link ColumnShape}, turning it into a {@link Column}.
  */
-const named = <T extends ColumnShape, S extends string>(col: T, field: S) => ({
+const toColumn = <T extends ColumnShape, S extends string>(col: T, tableName: string, field: S) => ({
   ...col,
   name: snake(field),
   field,
+  table: tableName,
 }) satisfies Column<T>;
 
 /**
@@ -399,16 +415,71 @@ const createDecoder = (cols: Column[]) => (row: any) => {
  * Condition builders.
  */
 const criteria = {
+  /**
+   * @private
+   *
+   * Builds an {@link ExprEq} expression.
+   */
   eq: (lhs: Expr, rhs: Expr) => ({ lhs, op: '=', rhs } as ExprEq),
-  neq: (lhs: Expr, rhs: Expr) => ({ lhs, op: '!=', rhs } as ExprNeq),
+  /**
+   * @private
+   *
+   * Builds an {@link ExprNe} expression.
+   */
+  ne: (lhs: Expr, rhs: Expr) => ({ lhs, op: '!=', rhs } as ExprNe),
+  /**
+   * @private
+   *
+   * Builds an {@link ExprLt} expression.
+   */
   lt: (lhs: Expr, rhs: Expr) => ({ lhs, op: '<', rhs } as ExprLt),
+  /**
+   * @private
+   *
+   * Builds an {@link ExprLte} expression.
+   */
   lte: (lhs: Expr, rhs: Expr) => ({ lhs, op: '<=', rhs } as ExprLte),
+  /**
+   * @private
+   *
+   * Builds an {@link ExprGt} expression.
+   */
   gt: (lhs: Expr, rhs: Expr) => ({ lhs, op: '>', rhs } as ExprGt),
+  /**
+   * @private
+   *
+   * Builds an {@link ExprGte} expression.
+   */
   gte: (lhs: Expr, rhs: Expr) => ({ lhs, op: '>=', rhs } as ExprGte),
+  /**
+   * @private
+   *
+   * Builds an {@link ExprLike} expression.
+   */
   like: (lhs: Expr, rhs: Expr) => ({ lhs, op: 'LIKE', rhs } as ExprLike),
+  /**
+   * @private
+   *
+   * Builds an {@link ExprIn} expression.
+   */
   in: (lhs: Expr, rhs: Expr[]) => ({ lhs, op: 'IN', rhs } as ExprIn),
+  /**
+   * @private
+   *
+   * Builds an {@link ExprAnd} expression.
+   */
   and: (exprs: Expr[]) => ({ and: exprs } as ExprAnd),
+  /**
+   * @private
+   *
+   * Builds an {@link ExprOr} expression.
+   */
   or: (exprs: Expr[]) => ({ or: exprs } as ExprOr),
+  /**
+   * @private
+   *
+   * Builds an {@link ExprNot} expression.
+   */
   not: (expr: Expr) => ({ not: expr } as ExprNot),
 };
 
@@ -418,17 +489,77 @@ const criteria = {
  * Narrows an expression type.
  */
 const is = {
+  /**
+   * @private
+   *
+   * Narrows a where clause expression to a {@link Column} reference.
+   */
   column: (expr: Expr): expr is Column => (expr as any).type && (expr as any).schema,
+  /**
+   * @private
+   *
+   * Narrows a where clause expression to an {@link ExprEq}.
+   */
   eq: (expr: Expr): expr is ExprEq => (expr as any).op === '=',
-  neq: (expr: Expr): expr is ExprNeq => (expr as any).op === '!=',
+  /**
+   * @private
+   *
+   * Narrows a where clause expression to an {@link ExprNe}.
+   */
+  ne: (expr: Expr): expr is ExprNe => (expr as any).op === '!=',
+  /**
+   * @private
+   *
+   * Narrows a where clause expression to an {@link ExLt}.
+   */
   lt: (expr: Expr): expr is ExprLt => (expr as any).op === '<',
+  /**
+   * @private
+   *
+   * Narrows a where clause expression to an {@link ExprLte}.
+   */
   lte: (expr: Expr): expr is ExprLte => (expr as any).op === '<=',
+  /**
+   * @private
+   *
+   * Narrows a where clause expression to an {@link ExprGt}.
+   */
   gt: (expr: Expr): expr is ExprGt => (expr as any).op === '>',
+  /**
+   * @private
+   *
+   * Narrows a where clause expression to an {@link ExprGte}.
+   */
   gte: (expr: Expr): expr is ExprGte => (expr as any).op === '>=',
+  /**
+   * @private
+   *
+   * Narrows a where clause expression to an {@link ExprLike}.
+   */
   like: (expr: Expr): expr is ExprLike => (expr as any).op === 'LIKE',
+  /**
+   * @private
+   *
+   * Narrows a where clause expression to an {@link ExprIn}.
+   */
   in: (expr: Expr): expr is ExprIn => (expr as any).op === 'IN',
+  /**
+   * @private
+   *
+   * Narrows a where clause expression to an {@link ExprAnd}.
+   */
   and: (expr: Expr): expr is ExprAnd => Array.isArray((expr as any).and),
+  /**
+   * @private
+   *
+   * Narrows a where clause expression to an {@link ExprOr}.
+   */
   or: (expr: Expr): expr is ExprOr => Array.isArray((expr as any).or),
+  /**
+   * @private
+   *
+   * Narrows a where clause expression to an {@link ExprNot}.
+   */
   not: (expr: Expr): expr is ExprNot => !!(expr as any).not,
 };
 
@@ -438,10 +569,32 @@ const is = {
  * Renders where clause expressions to SQL.
  */
 const render = {
+  /**
+   * @private
+   *
+   * Renders an "AND" where clause expression to SQL.
+   */
+  and: ({ and: exprs }: ExprAnd): ExprResult  => {
+    const frags: string[] = [];
+    const params: (string | number | null)[] = [];
+
+    for (const expr of exprs) {
+      const [frag, p] = render.any(expr);
+      frags.push(frag);
+      params.push(...p);
+    }
+
+    return [`(${frags.join(' AND ')})`, params] as const;
+  },
+  /**
+   * @private
+   *
+   * Renders any where clause expression to SQL.
+   */
   any: (expr: Expr) => {
     if (is.column(expr)) return render.column(expr);
     if (is.eq(expr)) return render.binary(expr);
-    if (is.neq(expr)) return render.binary(expr);
+    if (is.ne(expr)) return render.binary(expr);
     if (is.lt(expr)) return render.binary(expr);
     if (is.lte(expr)) return render.binary(expr);
     if (is.gt(expr)) return render.binary(expr);
@@ -453,26 +606,28 @@ const render = {
     if (is.not(expr)) return render.not(expr);
     return render.literal(expr);
   },
-  and: ({ and: exprs }: ExprAnd) => {
-    const frags: string[] = [];
-    const params: (string | number | null)[] = [];
-
-    for (const expr of exprs) {
-      const [frag, p] = render.any(expr) as [string, (string | number | null)[]];
-      frags.push(frag);
-      params.push(...p);
-    }
-
-    return [`(${frags.join(' AND ')})`, params] as const;
-  },
-  binary: (expr: ExprBinary) => {
-    const [lfrag, lparams] = render.any(expr.lhs) as [string, (string | number | null)[]];
-    const [rfrag, rparams] = render.any(expr.rhs) as [string, (string | number | null)[]];
-
+  /**
+   * @private
+   *
+   * Renders any binary op where clause expression to SQL.
+   */
+  binary: (expr: ExprBinaryOp): ExprResult  => {
+    const [lfrag, lparams] = render.any(expr.lhs);
+    const [rfrag, rparams] = render.any(expr.rhs);
     return [`(${lfrag} ${expr.op} ${rfrag})`, [...lparams, ...rparams]] as const;
   },
-  column: (col: Column) => [`"${col.name}"`, []] as const,
-  literal: (value: any) => {
+  /**
+   * @private
+   *
+   * Renders column reference to SQL.
+   */
+  column: (col: Column): ExprResult  => [`"${col.name}"`, []] as const,
+  /**
+   * @private
+   *
+   * Renders a literal value to SQL.
+   */
+  literal: (value: any): ExprResult  => {
     if (value === null) return ['?', ['NULL']] as const;
     if (typeof value === 'number') return ['?', [value]] as const;
     if (typeof [value] === 'string') return ['?', [value]] as const;
@@ -481,11 +636,21 @@ const render = {
     if (Array.isArray(value)) return ['(' + value.map(() => '?').join(', ') + ')', value] as const;
     throw new Error(`cannot render literal of type ${typeof value}`);
   },
-  not: ({ not: expr }: ExprNot) => {
-    const [frag, params] = render.any(expr) as [string, (string | number | null)[]];
+  /**
+   * @private
+   *
+   * Renders a "NOT" where clause expression to SQL.
+   */
+  not: ({ not: expr }: ExprNot): ExprResult  => {
+    const [frag, params] = render.any(expr);
     return [`(NOT ${frag})`, params] as const;
   },
-  or: ({ or: exprs }: ExprOr) => {
+  /**
+   * @private
+   *
+   * Renders an "OR" where clause expression to SQL.
+   */
+  or: ({ or: exprs }: ExprOr): [string, (string | number | null)[]]  => {
     const frags: string[] = [];
     const params: (string | number | null)[] = [];
 
@@ -506,6 +671,8 @@ const render = {
 */
 const statement = {
   /**
+   * @private
+   *
    * Generates an insert statement from the given table and rows.
    */
   insert: (table: Table, rows: Record<string, any>[]) => {
@@ -545,6 +712,8 @@ const statement = {
     return [ifrags.join(' ') + ';', iparams, parse] as const;
   },
   /**
+   * @private
+   *
    * Generates a query statement.
    */
   query: (query: Query) => {
@@ -598,11 +767,9 @@ class QueryBuilder<T extends Table> {
   #orderBy: [Column, SQLiteSortDirection][] = [];
   #limit?: number;
   #offset?: number;
-  #logger?: Logger;
 
-  constructor(table: T, logger?: Logger) {
+  constructor(table: T) {
     this.#table = table;
-    this.#logger = logger;
   }
 
   /**
@@ -701,10 +868,7 @@ class QueryBuilder<T extends Table> {
       offset: this.#offset,
     });
 
-    const stats: { db: Stats, parse: Stats } = {
-      db: { start: undefined, end: undefined },
-      parse: { start: undefined, end: undefined },
-    };
+    const stats: { db: Stats, parse: Stats } = { db: {}, parse: {} };
 
     stats.db.start = performance.now();
     const results = db.prepare(sql).all(...params);
@@ -717,7 +881,7 @@ class QueryBuilder<T extends Table> {
     stats.db.elapsed = stats.db.end! - stats.db.start!;
     stats.parse.elapsed = stats.parse.end! - stats.parse.start!;
 
-    this.#logger?.debug(`[db=${stats.db.elapsed}ms] [parse=${stats.parse.elapsed}ms] ${sql} ${inspect(params)}`);
+    db.logger.debug(`[Lity] [db=${stats.db.elapsed}ms] [parse=${stats.parse.elapsed}ms] ${sql} ${inspect(params)}`);
 
     return rows;
   }
@@ -805,6 +969,13 @@ export const t = {
     ...shape,
     schema: shape.schema.nullable().default(null),
     nullable: true,
+  }) as const,
+  /**
+   * Makes a column unique.
+   */
+  unique: <T extends z.ZodType>(shape: ColumnShape<T>) => ({
+    ...shape,
+    unique: true,
   }) as const,
   /**
    * Defines a blob column.
@@ -899,12 +1070,44 @@ export const t = {
  * Stablishes a "connection" to a SQLite database, creating its file
  * in case it doesn't exist yet.
  */
-export const connect = async (path: string) => {
+export const connect = async (path: string, logger: Logger) => {
   const file = Bun.file(path);
   if (!await file.exists()) await file.write('');
 
-  return new Database(path);
+  const db = new SQLiteDatabase(path) as any;
+  db.logger = logger;
+
+  return db as Database;
 };
+
+/**
+ * @public
+ *
+ * Creates an object in the database.
+ */
+export const createIfNotExists = {
+  /**
+   * @public
+   *
+   * Builds the create table statement.
+   */
+  table: (table: Table) => ({
+    /**
+     * @public
+     *
+     * Calls the given callback with the SQL that would be used to
+     * create the table, useful for debugging.
+     */
+    inspect (fn: (sql: string) => any) { fn(renderTable(table)); return this; },
+    /**
+     * @public
+     *
+     * Creates the table in the database in case it doesn't exist
+     * already.
+     */
+    run: async (db: Database) => { db.prepare(renderTable(table)).run() },
+  }) as const,
+} as const;
 
 /**
  * @public
@@ -913,20 +1116,8 @@ export const connect = async (path: string) => {
  * already.
  */
 export const setup = async (db: Database, tables: Table[]) => {
-  for (const table of tables) create.table(table).run(db);
+  for (const table of tables) createIfNotExists.table(table).run(db);
 };
-
-/**
- * @public
- *
- * Creates a table in the database.
- */
-export const create = {
-  table: (table: Table) => ({
-    inspect: () => renderTable(table),
-    run: async (db: Database) => { db.prepare(renderTable(table)).run() },
-  }) as const,
-} as const;
 
 /**
  * @public
@@ -980,7 +1171,7 @@ export const table = <T extends TableShape>(name: string, shape: T) => {
   const columns = Object.fromEntries(
     Object
       .entries(shape)
-      .map(([field, col]) => [field, named(col, field)]),
+      .map(([field, col]) => [field, toColumn(col, name, field)]),
   );
 
   return { [NAME]: name, ...columns } as Table<T>;

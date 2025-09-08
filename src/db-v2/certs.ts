@@ -5,7 +5,7 @@ export const certs = table('certs', {
   key: t.custom.absolutePath(),
   crt: t.custom.absolutePath(),
   ca: t.custom.absolutePath(),
-  md5: t.string(32),
+  md5: t.unique(t.string(32)),
   createdAt: t.datetime(),
   expiresAt: t.datetime(),
 });
