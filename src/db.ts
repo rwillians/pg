@@ -881,7 +881,7 @@ class QueryBuilder<T extends Table> {
     stats.db.elapsed = stats.db.end! - stats.db.start!;
     stats.parse.elapsed = stats.parse.end! - stats.parse.start!;
 
-    db.logger.debug(`[Lity] [db=${stats.db.elapsed}ms] [parse=${stats.parse.elapsed}ms] ${sql} ${inspect(params)}`);
+    db.logger.debug(`[Lity] [db=${stats.db.elapsed.toFixed(2)}ms] [parse=${stats.parse.elapsed.toFixed(2)}ms] ${sql} ${inspect(params)}`);
 
     return rows;
   }
@@ -1149,10 +1149,23 @@ export const into = <T extends Table>(table: T) => ({
         .array()
         .parse(rows);
 
+      const stats: { db: Stats, parse: Stats } = { db: {}, parse: {} };
       const [sql, params, parse] = statement.insert(table, data);
-      const results = db.prepare(sql).all(...params);
 
-      return parse(results) as Expand<Infer<T>>[];
+      stats.db.start = performance.now();
+      const results = db.prepare(sql).all(...params);
+      stats.db.end = performance.now();
+
+      stats.parse.start = performance.now();
+      const parsed = parse(results) as Expand<Infer<T>>[];
+      stats.parse.end = performance.now();
+
+      stats.db.elapsed = stats.db.end! - stats.db.start!;
+      stats.parse.elapsed = stats.parse.end! - stats.parse.start!;
+
+      db.logger.debug(`[Lity] [db=${stats.db.elapsed.toFixed(2)}ms] [parse=${stats.parse.elapsed.toFixed(2)}ms] ${sql} ${inspect(params)}`);
+
+      return parsed;
     },
   }),
 });
