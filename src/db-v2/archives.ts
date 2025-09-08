@@ -1,4 +1,4 @@
-import { type Infer, t, table } from '../lity';
+import { type Infer, t, table } from '../db-v2';
 
 export const archives = table('archives', {
   id: t.id(),
