@@ -1,7 +1,9 @@
 import { basename } from 'node:path';
 import { $command, $options } from '../commands';
-import { Dump } from '../../db-v1/dump';
 import { s } from '../../utils';
+
+import { dumps } from '../../db-v2/dumps';
+import { from } from '../../db-v2';
 
 const options = $options({
   id: {
@@ -19,7 +21,9 @@ export const dumpDownload = $command({
     const { id } = argv;
     const { db, logger, s3 } = ctx;
 
-    const dump = await Dump.findOneById(db, id);
+    const dump = await from(dumps)
+      .where(c => c.eq(dumps.id, id))
+      .one(db);
 
     if (!dump) {
       logger.error(`Dump ${s.red(id)} not found`)
