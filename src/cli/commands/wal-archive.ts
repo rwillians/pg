@@ -1,8 +1,10 @@
 import { $ } from 'bun';
 import { statSync } from 'node:fs';
 import { $command, $options } from '../commands';
-import { Archive } from '../../db-v1/archive';
 import { s } from '../../utils';
+
+import { archives } from '../../db-v2/archives';
+import { into } from '../../db-v2';
 
 const options = $options({
   path: {
@@ -47,11 +49,9 @@ export const walArchive = $command({
     await Bun.write(remoteTarFile, localTarFile);
 
     logger.debug('Updating internal state');
-    await Archive.insertOne(db, {
-      tar: remoteFilePath,
-      size: statSync(localTarPath).size,
-      archivedAt: new Date(),
-    });
+    await into(archives)
+      .insert([{ tar: remoteFilePath, size: statSync(localTarPath).size, archivedAt: new Date() }])
+      .run(db);
 
     logger.debug('Deleting temporary files');
     await localTarFile.unlink();
