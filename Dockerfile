@@ -1,4 +1,4 @@
-FROM oven/bun:1.2.20-alpine AS build
+FROM oven/bun:1.2.21-alpine AS build
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ RUN bun run compile
 
 #
 
-FROM postgres:17.5-alpine3.22 AS runtime
+FROM postgres:17.6-alpine3.22 AS runtime
 
 RUN apk add --no-cache openssl tini
 
