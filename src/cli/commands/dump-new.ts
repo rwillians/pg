@@ -3,8 +3,10 @@ import { randomUUIDv7 } from 'bun';
 import { execSync } from 'node:child_process';
 import { $command, $options } from '../commands';
 import type { Context } from '../../context';
-import { Dump } from '../../db-v1/dump';
 import { s } from '../../utils';
+
+import { dumps } from '../../db-v2/dumps';
+import { into } from '../../db-v2';
 
 const redact = (connectionString: string) => {
   const uri = new URL(connectionString);
@@ -72,12 +74,14 @@ export const dumpNew = $command({
     const elapsed = Math.round((performance.now() - start) / 1000);
 
     logger.debug('Updating internal state');
-    const dump = await Dump.insertOne(db, {
-      path: remotePath,
-      size: statSync(localPath).size,
-      startedAt,
-      completedAt
-    });
+    const [dump] = await into(dumps)
+      .insert([{ path: remotePath, size: statSync(localPath).size, startedAt, completedAt }])
+      .run(db);
+
+    if (!dump) {
+      logger.error(`Failed to create dump record in the database`);
+      return process.exit(1);
+    }
 
     logger.debug('Deleting temporary files');
     await localFile.unlink();
