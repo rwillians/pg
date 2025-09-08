@@ -1,24 +1,17 @@
 import { $, randomUUIDv7 } from 'bun';
 import type { Context } from '../../context';
 import { $command } from '../commands';
-import { Certs } from '../../db-v1/certs';
+import { fromNow } from '../../utils';
+
+import { certs } from '../../db-v2/certs';
+import { from, into } from '../../db-v2';
 
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
-
-const expiresIn = (certs: typeof Certs.infer) => {
-  return certs.expiresAt.getTime() - Date.now();
-};
 
 const key = (ctx: Context) => `${ctx.config.PG_STATE_DIR}/server.key`;
 const crt = (ctx: Context) => `${ctx.config.PG_STATE_DIR}/server.crt`;
 const ca = (ctx: Context) => `${ctx.config.PG_STATE_DIR}/root.crt`;
-
-const $md5 = async (path: string) => {
-  return (await $`md5sum ${path}`.text())
-    .split(' ')
-    .shift()!
-    .trim();
-};
+const md5 = async (path: string) => (await $`md5sum ${path}`.text()).split(' ').shift()!.trim();
 
 const issue = async (ctx: Context) => {
   const { config, db, logger, s3 } = ctx;
@@ -67,25 +60,33 @@ const issue = async (ctx: Context) => {
   await s3.file(remoteCaPath).write(Bun.file(ca(ctx)));
 
   logger.debug('Updating internal state');
-  return Certs.insertOne(db, {
-    key: remoteKeyPath,
-    crt: remoteCrtPath,
-    ca: remoteCaPath,
-    md5: await $md5(crt(ctx)),
-    createdAt,
-    expiresAt,
-  });
+  const [row] = await into(certs)
+    .insert([{ key: remoteKeyPath, crt: remoteCrtPath, ca: remoteCaPath, md5: await md5(crt(ctx)), createdAt, expiresAt }])
+    .run(db);
+
+  if (!row) {
+    throw new Error('Failed to insert new TLS certificates into the database');
+  }
+
+  return row;
 };
 
 const resolve = async (ctx: Context) => {
   const { db } = ctx;
 
-  const certs = await Certs.latestBy(db, 'expiresAt');
+  const cert = await from(certs)
+    .where(c => c.gt(certs.expiresAt, fromNow(ONE_WEEK)))
+    .orderBy([[certs.expiresAt, 'DESC']])
+    .limit(1)
+    .one(db);
 
-  if (!certs) return issue(ctx);
-  if (expiresIn(certs) < ONE_WEEK) return issue(ctx);
+  if (!cert) {
+    // we either don't have any certs or the existing ones will expire
+    // in less than a week, whichever the case let's issue a new cert
+    return issue(ctx);
+  }
 
-  return certs;
+  return cert;
 };
 
 export const certsInstall = $command({
@@ -95,7 +96,7 @@ export const certsInstall = $command({
     const { config, logger, s3 } = ctx;
 
     const certs = await resolve(ctx);
-    if (await $md5(crt(ctx)) === certs.md5) return;
+    if (await md5(crt(ctx)) === certs.md5) return;
 
     logger.debug('Downloading TLS certificates from S3');
     await Bun.write(Bun.file(key(ctx)), s3.file(certs.key));
