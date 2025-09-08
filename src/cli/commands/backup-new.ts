@@ -17,10 +17,10 @@ const getPreviousBackupInfo = async (ctx: Context, incremental: boolean) => {
   }
 
   logger.debug('Looking for the a parent incremental backup');
-  const [lastBackup] = await from(backups)
+  const lastBackup = await from(backups)
     .orderBy([[backups.completedAt, 'DESC']])
     .limit(1)
-    .run(db);
+    .one(db);
 
   if (!lastBackup) {
     logger.debug('No parent incremental backup found');

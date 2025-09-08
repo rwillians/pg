@@ -1,6 +1,8 @@
 import { isAbsolute } from 'node:path';
+import { inspect } from 'node:util';
 import { Database } from 'bun:sqlite';
 import { z } from 'zod/v4';
+import type { Logger } from './logger';
 
 //////////////////////////////////////////////////////////////////////
 ///                            SYMBOLS                             ///
@@ -35,6 +37,17 @@ type SQLiteSortDirection = 'ASC' | 'DESC';
  * Forces TypeScript to expand/resolve a complex object type.
  */
 type Expand<T> = T extends object ? { [K in keyof T]: T[K] } : T;
+
+/**
+ * @private
+ *
+ * Type for tracking performance stats.
+ */
+type Stats = {
+  start?: number;
+  end?: number;
+  elapsed?: number;
+}
 
 //////////////////////////////////////////////////////////////////////
 ///                          PUBLIC TYPES                          ///
@@ -585,32 +598,59 @@ class QueryBuilder<T extends Table> {
   #orderBy: [Column, SQLiteSortDirection][] = [];
   #limit?: number;
   #offset?: number;
+  #logger?: Logger;
 
-  constructor(table: T) {
+  constructor(table: T, logger?: Logger) {
     this.#table = table;
+    this.#logger = logger;
   }
 
-  where(fn: (c: typeof criteria) => Expr): this {
-    this.#where = fn(criteria);
-    return this;
-  }
+  /**
+   * @public
+   *
+   * Defines the where clauses for the query. Calling this method
+   * will override any previous where clause defined.
+   */
+  where(fn: (c: typeof criteria) => Expr): this { this.#where = fn(criteria); return this; }
 
+  /**
+   * @public
+   *
+   * Defines the sorting order for the query. Calling this method
+   * will override any previous sort order defined.
+   */
   orderBy<O extends [Column, SQLiteSortDirection]>(sort: O[]): this {
     this.#orderBy = sort;
     return this;
   }
 
+  /**
+   * @public
+   *
+   * Limits the number of rows returned by the query.
+   */
   limit(limit: number): this {
     this.#limit = limit;
     return this;
   }
 
+  /**
+   * @public
+   *
+   * Offsets the rows returned by the query.
+   */
   offset(offset: number): this {
     this.#offset = offset;
     return this;
   }
 
-  inspect(): this {
+  /**
+   * @public
+   *
+   * Inspects the SQL and parameters that would be executed by the
+   * query, useful for debugging.
+   */
+  inspect(fn: (sql: string, params: any[]) => any): this {
     const { [NAME]: _name, ...columns } = this.#table;
 
     const [sql, params] = statement.query({
@@ -622,12 +662,34 @@ class QueryBuilder<T extends Table> {
       offset: this.#offset,
     });
 
-    console.log('[DEBUG]', sql, params);
+    fn(sql, params);
 
     return this;
   }
 
-  async run(db: Database) {
+  /**
+   * @public
+   *
+   * Creates a copy of the query builder.
+   */
+  clone(): QueryBuilder<T> {
+    const q = new QueryBuilder(this.#table);
+
+    q.#where = this.#where;
+    q.#orderBy = [...this.#orderBy];
+    q.#limit = this.#limit;
+    q.#offset = this.#offset;
+
+    return q;
+  }
+
+  /**
+   * @public
+   *
+   * Executes the query against the database, returning all rows
+   * that match the criteria.
+   */
+  async all(db: Database) {
     const { [NAME]: _name, ...columns } = this.#table;
 
     const [sql, params, parse] = statement.query({
@@ -639,9 +701,44 @@ class QueryBuilder<T extends Table> {
       offset: this.#offset,
     });
 
-    const results = db.prepare(sql).all(...params);
+    const stats: { db: Stats, parse: Stats } = {
+      db: { start: undefined, end: undefined },
+      parse: { start: undefined, end: undefined },
+    };
 
-    return parse(results) as Expand<Infer<T>>[];
+    stats.db.start = performance.now();
+    const results = db.prepare(sql).all(...params);
+    stats.db.end = performance.now();
+
+    stats.parse.start = performance.now();
+    const rows = parse(results) as Expand<Infer<T>>[];
+    stats.parse.end = performance.now();
+
+    stats.db.elapsed = stats.db.end! - stats.db.start!;
+    stats.parse.elapsed = stats.parse.end! - stats.parse.start!;
+
+    this.#logger?.debug(`[db=${stats.db.elapsed}ms] [parse=${stats.parse.elapsed}ms] ${sql} ${inspect(params)}`);
+
+    return rows;
+  }
+
+  /**
+   * @public
+   *
+   * Executes the query against the database, returning at most a
+   * single row that match the criteria. If the query results in more
+   * than one row, then an error is thrown.
+   */
+  async one(db: Database) {
+    const rows = await this
+      .clone()
+      .limit(1)
+      .all(db);
+
+    if (rows.length === 0) return null;
+    if (rows.length > 1) throw new Error(`Expected at most one row, got ${rows.length}`);
+
+    return rows[0] as Expand<Infer<T>>;
   }
 }
 

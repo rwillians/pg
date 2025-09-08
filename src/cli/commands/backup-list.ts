@@ -8,7 +8,7 @@ export const backupList = $command({
   describe: 'Lists all available backups',
   handler: async (_argv, ctx) => {
     const { db } = ctx;
-    const rows = await from(backups).run(db);
+    const rows = await from(backups).all(db);
 
     console.table(rows.map(withHumanReadableSize));
   },
