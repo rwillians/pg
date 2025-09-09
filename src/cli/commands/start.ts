@@ -52,6 +52,7 @@ export const start = $command({
       '-c', 'archive_mode=on',
       '-c', 'archive_command=pg wal archive -p %p -f %f',
       '-c', 'restore_command=pg wal unarchive -p %p -f %f',
+      '-c', 'shared_preload_libraries=pg_stat_statements',
       '-c', 'ssl=on',
       '-c', `ssl_ca_file=${config.PG_STATE_DIR}/root.crt`,
       '-c', `ssl_cert_file=${config.PG_STATE_DIR}/server.crt`,
