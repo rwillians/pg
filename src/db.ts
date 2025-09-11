@@ -11,7 +11,7 @@ import type { Logger } from './logger';
 /**
  * The name of the key in Table that stores the table name.
  */
-const NAME = Symbol.for('~name');
+export const NAME = Symbol.for('~name');
 
 //////////////////////////////////////////////////////////////////////
 ///                         PRIVATE TYPES                          ///
@@ -29,21 +29,21 @@ type SQLiteDataType = 'BLOB' | 'INTEGER' | 'REAL' | 'TEXT' | `VARCHAR(${number})
  *
  * Sort directions supported in SQLite queries.
  */
-type SQLiteSortDirection = 'ASC' | 'DESC';
+export type SQLiteSortDirection = 'ASC' | 'DESC';
 
 /**
  * @private
  *
  * Forces TypeScript to expand/resolve a complex object type.
  */
-type Expand<T> = T extends object ? { [K in keyof T]: T[K] } : T;
+export type Expand<T> = T extends object ? { [K in keyof T]: T[K] } : T;
 
 /**
  * @private
  *
  * Type for tracking performance stats.
  */
-type Stats = {
+export type Stats = {
   start?: number;
   end?: number;
   elapsed?: number;
@@ -104,6 +104,7 @@ export type ColumnShape<T extends z.ZodType = z.ZodType> = {
 export type Column<T extends ColumnShape = ColumnShape> = T & {
   name: string;  // ← name in the database
   field: string; // ← name in the code
+  alias: string; // ← alias used in joins
   table: string; // ← name of the table the column belongs to
 };
 
@@ -245,7 +246,7 @@ type ExprLiteral = any;
  *
  * All where clause expressions supported.
  */
-type Expr =
+export type Expr =
   Column
   | ExprEq
   | ExprNe
@@ -326,6 +327,7 @@ const toColumn = <T extends ColumnShape, S extends string>(col: T, tableName: st
   ...col,
   name: snake(field),
   field,
+  alias: `"${snake(field)}"`,
   table: tableName,
 }) satisfies Column<T>;
 
@@ -414,7 +416,7 @@ const createDecoder = (cols: Column[]) => (row: any) => {
  *
  * Condition builders.
  */
-const criteria = {
+export const criteria = {
   /**
    * @private
    *
@@ -492,9 +494,15 @@ const is = {
   /**
    * @private
    *
+   * Narrows a where clause expression to a literal value.
+   */
+  null: (expr: Expr): expr is ExprLiteral => expr === null,
+  /**
+   * @private
+   *
    * Narrows a where clause expression to a {@link Column} reference.
    */
-  column: (expr: Expr): expr is Column => (expr as any).type && (expr as any).schema,
+  column: (expr: Expr): expr is Column => expr !== (expr as any).type && (expr as any).schema,
   /**
    * @private
    *
@@ -568,7 +576,7 @@ const is = {
  *
  * Renders where clause expressions to SQL.
  */
-const render = {
+export const render = {
   /**
    * @private
    *
@@ -592,6 +600,7 @@ const render = {
    * Renders any where clause expression to SQL.
    */
   any: (expr: Expr) => {
+    if (is.null(expr)) return render.literal(expr);
     if (is.column(expr)) return render.column(expr);
     if (is.eq(expr)) return render.binary(expr);
     if (is.ne(expr)) return render.binary(expr);
@@ -612,6 +621,16 @@ const render = {
    * Renders any binary op where clause expression to SQL.
    */
   binary: (expr: ExprBinaryOp): ExprResult  => {
+    if (is.null(expr.rhs) && expr.op === '=' && is.column(expr.lhs)) {
+      const [lfrag] = render.column(expr.lhs);
+      return [`(${lfrag} IS NULL)`, []] as const;
+    }
+
+    if (is.null(expr.lhs) && expr.op === '=' && is.column(expr.rhs)) {
+      const [rfrag] = render.column(expr.rhs);
+      return [`(${rfrag} IS NULL)`, []] as const;
+    }
+
     const [lfrag, lparams] = render.any(expr.lhs);
     const [rfrag, rparams] = render.any(expr.rhs);
     return [`(${lfrag} ${expr.op} ${rfrag})`, [...lparams, ...rparams]] as const;
@@ -621,7 +640,7 @@ const render = {
    *
    * Renders column reference to SQL.
    */
-  column: (col: Column): ExprResult  => [`"${col.name}"`, []] as const,
+  column: (col: Column): ExprResult  => [col.alias, []],
   /**
    * @private
    *
