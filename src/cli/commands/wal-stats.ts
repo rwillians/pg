@@ -1,6 +1,8 @@
 import { humanReadableSize, sumBy } from '../../utils';
-import { Archive } from '../../db/archive';
 import { $command } from '../commands';
+
+import { archives } from '../../db/archives';
+import { from } from '../../db';
 
 export const walStats = $command({
   signature: 'stats',
@@ -9,12 +11,11 @@ export const walStats = $command({
     const { db, logger } = ctx;
 
     logger.debug('Loading archives data');
-    const archives = await Archive.all(db);
+    const rows = await from(archives).all(db);
 
-    logger.debug('Crunching stats');
-    const count = archives.length;
-    const size = archives.reduce(sumBy('size'), 0);
-    logger.debug('Stats ready');
+    logger.debug('Crunching stats...');
+    const count = rows.length;
+    const size = rows.reduce(sumBy('size'), 0);
 
     const stats = [
       { label: 'segments', value: count },

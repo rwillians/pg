@@ -1,8 +1,10 @@
 import { statSync } from 'node:fs';
 import { randomUUIDv7 } from 'bun';
 import { $command, $options } from '../commands';
-import { Dump } from '../../db/dump';
 import { s } from '../../utils';
+
+import { dumps } from '../../db/dumps';
+import { into } from '../../db';
 
 const options = $options({
   file: {
@@ -38,12 +40,16 @@ export const dumpImport = $command({
     const elapsed = Math.round((performance.now() - start) / 1000);
 
     logger.debug(`Updating internal state`);
-    const dump = await Dump.insertOne(db, {
-      path: remotePath,
-      size: statSync(file).size,
-      startedAt: new Date(),
-      completedAt: new Date(),
-    });
+    const now = new Date();
+
+    const [dump] = await into(dumps)
+      .insert([{ path: remotePath, size: statSync(file).size, startedAt: now, completedAt: now }])
+      .run(db);
+
+    if (!dump) {
+      logger.error(`Failed to create dump record in the database`);
+      return process.exit(1);
+    }
 
     logger.info(`Dump ${s.blue(dump.id)} created successfully! Took ${elapsed}s`)
   },

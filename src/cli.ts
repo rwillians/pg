@@ -5,6 +5,7 @@ import { start } from './cli/commands/start';
 import { backupList } from './cli/commands/backup-list';
 import { backupNew } from './cli/commands/backup-new';
 import { backupRestore } from './cli/commands/backup-restore';
+import { busybox } from './cli/commands/busybox';
 import { certsInstall } from './cli/commands/certs-install';
 import { configList } from './cli/commands/config-list';
 import { dumpDownload } from './cli/commands/dump-download';
@@ -13,6 +14,7 @@ import { dumpLink } from './cli/commands/dump-link';
 import { dumpList } from './cli/commands/dump-list';
 import { dumpNew } from './cli/commands/dump-new';
 import { dumpRestore } from './cli/commands/dump-restore';
+import { stateImportV2 } from './cli/commands/state-import-v2';
 import { statePull } from './cli/commands/state-pull';
 import { statePush } from './cli/commands/state-push';
 import { walArchive } from './cli/commands/wal-archive';
@@ -32,6 +34,7 @@ pg.command('backup', 'Manage base backups', (cli) => cli
   .command(backupList())
   .command(backupRestore())
 );
+pg.command(busybox());
 pg.command('certs', 'Manage TLS certificates', (cli) => cli
   .command(certsInstall())
 );
@@ -47,6 +50,7 @@ pg.command('dump', 'Manage database dumps', (cli) => cli
   .command(dumpRestore())
 );
 pg.command('state', 'Manage the cli internal state', (cli) => cli
+  .command(stateImportV2())
   .command(statePush())
   .command(statePull())
 );

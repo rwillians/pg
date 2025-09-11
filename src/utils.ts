@@ -63,6 +63,10 @@ export const sumBy = <T extends Record<string, any>, K extends keyof T>(k: K) =>
   (acc: number, item: T): number =>
     acc + (item[k] ?? 0);
 
+export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const fromNow = (n: number) => new Date(Date.now() + n)
+
 //////////////////////////////////////////////////////////////////////
 ///                              ZOD                               ///
 //////////////////////////////////////////////////////////////////////

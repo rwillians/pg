@@ -3,6 +3,11 @@ import { createLogger } from './logger';
 import { parseConfig } from './config';
 import { connect, setup } from './db';
 
+import { archives } from './db/archives';
+import { backups } from './db/backups';
+import { certs } from './db/certs';
+import { dumps } from './db/dumps';
+
 export const createContext = async (env: Bun.Env) => {
   const config = parseConfig(env);
 
@@ -18,8 +23,8 @@ export const createContext = async (env: Bun.Env) => {
     region: config.S3_REGION,
   });
 
-  const db = await connect(config);
-  await setup(db);
+  const db = await connect(`${config.PG_STATE_DIR}/db.sqlite`, logger);
+  await setup(db, [archives, backups, certs, dumps]);
 
   return {
     config,

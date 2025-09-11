@@ -1,7 +1,9 @@
 import { execSync } from 'node:child_process';
 import { $command, $options } from '../commands';
-import { Backup } from '../../db/backup';
 import { s } from '../../utils';
+
+import { backups } from '../../db/backups';
+import { from } from '../../db';
 
 const options = $options({
   id: {
@@ -28,13 +30,26 @@ export const backupRestore = $command({
     const { config, db, logger, s3 } = ctx;
 
     if (!force) {
-      logger.warning(`Restoring from a backup is a ${s.bold('DANGEROUS ACTION')} because it will erase all existing data from the database as part of the restoration process`);
-      logger.warning(`Please make sure to do a backup of ${s.blue(config.POSTGRES_DATA_DIR)} before proceeding`);
-      logger.warning(`When you're ready to proceed then rerun this command with the ${s.brightRed('--force')} flag`);
+      logger.warning(`
+      Restoring from a backup is a ${s.bold(s.red('DANGEROUS ACTION'))} because it
+      will erase all existing data from the database as part of the
+      restoration process.
+
+      Please make sure to do a backup of the following directory before
+      proceeding:
+
+          ${s.bold(s.red(config.POSTGRES_DATA_DIR))}
+
+      When you're ready to proceed then rerun this command with the
+      ${s.brightRed('--force')} flag.
+      `);
+
       process.exit(1);
     }
 
-    const backup = await Backup.findOneById(db, id)
+    const backup = await from(backups)
+      .where(c => c.eq(backups.id, id))
+      .one(db);
 
     if (!backup) {
       logger.error(`Backup ${s.blue(id)} not found`);
