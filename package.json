@@ -12,12 +12,10 @@
     "compile": "bun build --compile --outfile=dist/pg src/cli.ts && chmod +x dist/pg"
   },
   "dependencies": {
-    "yargs": "^18.0.0",
-    "zod": "^3.25.76"
+    "zod": "^4.1.11"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.20",
-    "@types/yargs": "^17.0.33"
+    "@types/bun": "^1.2.22"
   },
   "peerDependencies": {
     "typescript": "^5.8.3"
