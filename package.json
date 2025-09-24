@@ -1,23 +1,22 @@
 {
-  "name": "@rwillians/pg",
+  "name": "@rwillians/mpg",
   "description": "Managed PostgreSQL made easy.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "module": "src/index.ts",
   "type": "module",
   "private": true,
-  "engines": {
-    "bun": "^1.2.18"
-  },
   "scripts": {
-    "compile": "bun build --compile --outfile=dist/pg src/cli.ts && chmod +x dist/pg"
+    "compile": "bun build --compile --outfile=dist/mpg src/cli.ts && chmod +x dist/mpg"
   },
   "dependencies": {
+    "@rwillians/sqlity": "link:@rwillians/sqlity",
+    "elysia": "^1.4.7",
     "zod": "^4.1.11"
   },
   "devDependencies": {
     "@types/bun": "^1.2.22"
   },
   "peerDependencies": {
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.2"
   }
 }
