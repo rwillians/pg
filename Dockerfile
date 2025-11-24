@@ -11,7 +11,7 @@ RUN bun run compile
 
 #
 
-FROM postgres:17.5-alpine3.22 AS runtime
+FROM postgres:18.1-alpine3.22 AS runtime
 
 RUN apk add --no-cache openssl tini
 
