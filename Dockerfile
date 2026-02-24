@@ -13,8 +13,6 @@ RUN bun run compile
 
 FROM dhi.io/postgres:18.2-alpine3.22 AS runtime
 
-RUN apk add --no-cache openssl tini
-
 COPY --from=build /app/dist/pg /usr/local/bin/pg
 COPY --chown=postgres:postgres ./config/pg_hba.conf.sample /usr/local/share/postgresql/pg_hba.conf.sample
 
@@ -29,5 +27,5 @@ STOPSIGNAL SIGINT
 EXPOSE 5432
 EXPOSE 3000
 
-ENTRYPOINT ["tini", "--", "pg"]
+ENTRYPOINT ["pg"]
 CMD ["start"]
