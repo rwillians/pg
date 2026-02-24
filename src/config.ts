@@ -50,12 +50,17 @@ const Schema = z.object({
   /**
    * Controls log verbosity.
    */
-  LOG_LEVEL: z.enum(['debug', 'info', 'notice', 'warning', 'error']).default('info'),
+  PG_LOG_LEVEL: z.enum(['debug', 'info', 'notice', 'warning', 'error']).default('info'),
 
   /**
    * Mutes all output except for warnings and errors.
    */
-  SILENT: z.coerce.boolean().default(NODE_ENV === 'test'),
+  PG_SILENT: z.coerce.boolean().default(NODE_ENV === 'test'),
+
+  /**
+   * Defines the directory where pg stores its state.
+   */
+  PG_STATE_DIR: zc.absolutePath().default('/var/lib/pg'),
 
   /**
    * Defines the maximum number of connections allowed.

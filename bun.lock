@@ -5,6 +5,7 @@
     "": {
       "name": "@rwillians/pg",
       "dependencies": {
+        "@rwillians/qx": "^0.1.19",
         "yargs": "^18.0.0",
         "zod": "^4.3.6",
       },
@@ -18,6 +19,8 @@
     },
   },
   "packages": {
+    "@rwillians/qx": ["@rwillians/qx@0.1.19", "", { "peerDependencies": { "typescript": "^5.9.3" } }, "sha512-1ExPCdqCcgrTpo0BsLD7DEi8zsDuO4uFFlXA5inMTX/f8JdMp1+JWZwCBTjtm5UXu9pQrWtCP5SzNKYaog216w=="],
+
     "@types/bun": ["@types/bun@1.3.9", "", { "dependencies": { "bun-types": "1.3.9" } }, "sha512-KQ571yULOdWJiMH+RIWIOZ7B2RXQGpL1YQrBtLIV3FqDcCu6FsbFUBwhdKUlCKUpS3PJDsHlJ1QKlpxoVR+xtw=="],
 
     "@types/node": ["@types/node@25.3.0", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-4K3bqJpXpqfg2XKGK9bpDTc6xO/xoUP/RBWS7AtRMug6zZFaRekiLzjVtAoZMquxoAbzBvy5nxQ7veS5eYzf8A=="],
