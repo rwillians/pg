@@ -43,9 +43,50 @@ const Schema = z.object({
    */
   PGDATA: z.literal(`/var/lib/postgresql/${major()}/data`),
 
+  /**
+   * Must be "postgres" OS user.
+   */
+  USER: z.literal('postgres'),
+
+  // // // // // // // // // // // // // // // // // // // // // // //
+  // TLS CERTIFICATE CONFIGURATIONS                                 //
+  // // // // // // // // // // // // // // // // // // // // // // //
+
+  TLS_SUBJECT_EXPIRY_DAYS: z.coerce.number().int().min(90).max(365).default(365),
+  TLS_SUBJECT_COUNTRY: z.string().default(''),
+  TLS_SUBJECT_STATE: z.string().default(''),
+  TLS_SUBJECT_LOCALITY: z.string().default(''),
+  TLS_SUBJECT_ORGANIZATION: z.string().default(''),
+  TLS_SUBJECT_ORGANIZATIONAL_UNIT: z.string().default(''),
+  TLS_SUBJECT_COMMON_NAME: z.string().default(''),
+  TLS_SUBJECT_EMAIL: z.email().default(''),
+
+  // // // // // // // // // // // // // // // // // // // // // // //
+  // S3-COMPATIBLE STORAGE                                          //
+  // // // // // // // // // // // // // // // // // // // // // // //
+
+  S3_ENDPOINT: z.url(),
+  S3_REGION: zc.nes().optional(),
+  S3_BUCKET: zc.bucketname(),
+  S3_ACCESS_KEY_ID: zc.nes(),
+  S3_SECRET_ACCESS_KEY: zc.nes(),
+  S3_ARCHIVES_PREFIX: zc.absolutePath().default('/archives'),
+  S3_BACKUPS_PREFIX: zc.absolutePath().default('/backups'),
+  S3_DUMPS_PREFIX: zc.absolutePath().default('/dumps'),
+  S3_CERTS_PREFIX: zc.absolutePath().default('/certs'),
+
   // // // // // // // // // // // // // // // // // // // // // // //
   // PG CLI SETTINGS                                                //
   // // // // // // // // // // // // // // // // // // // // // // //
+
+  /**
+   * The database instance slug. When present, pg state wil be stored
+   * under a directory named after the slug.
+   *
+   * This allows multiple database instaces to safely share the same
+   * S3 bucket by isolating their state in different directories.
+   */
+  PG_SLUG: zc.slug().optional(),
 
   /**
    * Controls log verbosity.
@@ -91,13 +132,15 @@ const Schema = z.object({
 
 export type Config = z.infer<typeof Schema>;
 
+const prune = (msg: string) => msg.replace(/^Invalid input\: /, '');
+
 const pretty = (error: z.ZodError) => {
   const header = 'One or more environment variables are either missing or invalid:';
 
   const issues = error
     .issues
     .filter(({ message }) => (message ?? '').trim() !== '')
-    .map(({ path, message }) => `  - field ${style.red(path.join('.'))} ${message}`)
+    .map(({ path, message }) => `  - field ${style.red(path.join('.'))} ${prune(message)}`)
     .join('\n');
 
   return `${header}\n${issues}\n`;

@@ -46,6 +46,11 @@ export const removeTrailing = (char: string) => (str: string) => str.endsWith(ch
   : str;
 
 /**
+ * Returns the amount of milliseconds left until the given timestamp.
+ */
+export const timeLeft = (ts: Date) => Math.max(0, ts.valueOf() - Date.now())
+
+/**
  * Trim whitespace from both ends of the given string.
  */
 export const trim = (str: string) => str.trim();
@@ -135,6 +140,15 @@ export const size = {
 };
 
 // // // // // // // // // // // // // // // // // // // // // // //
+// SYNTAX SUGARS                                                  //
+// // // // // // // // // // // // // // // // // // // // // // //
+
+/**
+ * A no-operation function that does nothing and returns undefined.
+ */
+export const noop = () => {};
+
+// // // // // // // // // // // // // // // // // // // // // // //
 // TERMINAL UTILITY FUNCTIONS                                     //
 // // // // // // // // // // // // // // // // // // // // // // //
 
@@ -173,8 +187,9 @@ export const style: {
 // // // // // // // // // // // // // // // // // // // // // // //
 
 const URL_SAFE_BASE64 = /^[A-Za-z0-9_-]+$/;
-
+const SAFE_BUCKET_NAME = /^[A-Za-z][A-Za-z0-9_-]+$/;
 const SAFE_OBJECT_NAME = /^[a-z][a-z0-9_]+$/;
+const SLUG = /^[a-z][a-z0-9\-]+$/;
 
 /**
  * Hand-crafted custom Zod types.
@@ -190,6 +205,13 @@ export const zc = {
     .refine(isAbsolute, { message: 'must be an absolute path' })
     .transform(removeTrailing('/')),
   /**
+   * A type that accepts valid S3 bucket names.
+   */
+  bucketname: () => z
+    .string()
+    .min(3, { message: 'must be at least 3 characters long' })
+    .regex(SAFE_BUCKET_NAME, { message: `must start with a letter followed by letters, numbers, underscores or dashes (${SAFE_BUCKET_NAME})` }),
+  /**
    * A type that only accepts memory sizes (e.g. 64MB, 1GB, etc).
    */
   memorySize: () => z
@@ -199,7 +221,7 @@ export const zc = {
    * A type that accepts non-empty strings, where strings that contain
    * only whitespaces are considered empty.
    */
-  nen: () => z
+  nes: () => z
     .string()
     .min(1, { message: 'cannot be empty' })
     .refine(str => len(trim(str)) >= 0, { message: 'cannot be only whitespaces' }),
@@ -220,6 +242,14 @@ export const zc = {
     .min(16, { message: 'must be at least 16 characters long' })
     .max(72, { message: 'let\'s not abuse though, keep it under 72 characters' })
     .regex(URL_SAFE_BASE64, { message: `must contain only characters from url-safe base64 (${URL_SAFE_BASE64})` }),
+  /**
+   * A type that only accepts slugs.
+   */
+  slug: () => z
+    .string()
+    .min(1, { message: 'cannot be empty' })
+    .refine(str => len(trim(str)) >= 0, { message: 'cannot be only whitespaces' })
+    .regex(SLUG, { message: `must start with a letter followed by letters, numbers or dashes (${SLUG})` }),
   /**
    * A type that only accepts storage sizes (e.g. 64MB, 1GB, etc).
    */

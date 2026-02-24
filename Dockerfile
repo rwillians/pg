@@ -1,4 +1,4 @@
-FROM oven/bun:1.2.20-alpine AS build
+FROM oven/bun:1.3.9-alpine AS build
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ RUN bun run compile
 
 #
 
-FROM postgres:17.5-alpine3.22 AS runtime
+FROM dhi.io/postgres:18.2-alpine3.22 AS runtime
 
 RUN apk add --no-cache openssl tini
 
@@ -22,8 +22,12 @@ USER postgres
 WORKDIR /var/lib/pg
 
 VOLUME /var/lib/pg
+VOLUME /var/lib/postgresql/
 
 STOPSIGNAL SIGINT
+
+EXPOSE 5432
+EXPOSE 3000
 
 ENTRYPOINT ["tini", "--", "pg"]
 CMD ["start"]
