@@ -1,7 +1,7 @@
 {
   "name": "@rwillians/pg",
   "description": "Managed PostgreSQL made easy.",
-  "version": "0.5.0",
+  "version": "18.0.0",
   "module": "src/index.ts",
   "type": "module",
   "private": true,

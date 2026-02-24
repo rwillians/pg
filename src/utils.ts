@@ -23,6 +23,11 @@ export const keys = <T extends Record<string, any>>(obj: T) => Object.keys(obj) 
 export const len = <T extends { length: number }>(value: T) => value.length;
 
 /**
+ * Extracts the major version from the given semver string.
+ */
+export const major = (semver: string) => semver.split('.')[0]!;
+
+/**
  * Negates the result of the given predicate function.
  */
 export const not = <T>(predicate: (...args: T[]) => boolean) => (...args: T[]) => !predicate(...args);
@@ -52,6 +57,7 @@ export const _ = {
   has,
   keys,
   len,
+  major,
   not,
   rand,
   removeTrailing,
@@ -96,7 +102,7 @@ const SUBJECTS = [
 /**
  * Generates a URL-safe base64 strong secret of the specified length.
  */
-export const secret = (len: number = 32) => crypto
+const secret = (len: number = 32) => crypto
   .randomBytes(~~(len * 1.5))
   .toString('base64url')
   .slice(0, len);
@@ -104,14 +110,28 @@ export const secret = (len: number = 32) => crypto
 /**
  * Generates a random slug.
  */
-export const slug = () => `${rand(ADJECTIVES)}-${rand(ADJECTIVES)}-${rand(SUBJECTS)}`;
+const slug = () => `${rand(ADJECTIVES)}-${rand(ADJECTIVES)}-${rand(SUBJECTS)}`;
 
 /**
  * Faker-like utility functions.
  */
-export const faker = {
+export const gen = {
   secret,
   slug,
+};
+
+// // // // // // // // // // // // // // // // // // // // // // //
+// SIZE UTILITY FUNCTIONS                                         //
+// // // // // // // // // // // // // // // // // // // // // // //
+
+/**
+ * Utility functions for dealing with sizes (e.g. 64MB, 1GB, etc).
+ */
+export const size = {
+  /**
+   * Checks if the given string is a size (e.g. 64MB, 1GB, etc).
+   */
+  is: (str: string) => /^\d+(KB|MB|GB|TB)$/.test(str),
 };
 
 // // // // // // // // // // // // // // // // // // // // // // //
@@ -154,6 +174,8 @@ export const style: {
 
 const URL_SAFE_BASE64 = /^[A-Za-z0-9_-]+$/;
 
+const SAFE_OBJECT_NAME = /^[a-z][a-z0-9_]+$/;
+
 /**
  * Hand-crafted custom Zod types.
  */
@@ -168,6 +190,12 @@ export const zc = {
     .refine(isAbsolute, { message: 'must be an absolute path' })
     .transform(removeTrailing('/')),
   /**
+   * A type that only accepts memory sizes (e.g. 64MB, 1GB, etc).
+   */
+  memorySize: () => z
+    .string()
+    .refine(size.is, { error: 'must be a valid memory size (e.g. 64MB, 1GB, etc)' }),
+  /**
    * A type that accepts non-empty strings, where strings that contain
    * only whitespaces are considered empty.
    */
@@ -176,6 +204,15 @@ export const zc = {
     .min(1, { message: 'cannot be empty' })
     .refine(str => len(trim(str)) >= 0, { message: 'cannot be only whitespaces' }),
   /**
+   * A type that only accepts strings that are safe to use as
+   * PostgreSQL object names (e.g. username, table name, etc.).
+   */
+  objectname: () => z
+    .string()
+    .min(3, { message: 'must be at least 3 characters long' })
+    .max(32, { message: 'must be at most 32 characters long' })
+    .regex(SAFE_OBJECT_NAME, { message: `must start with a lowercase letter and contain only lowercase letters, numbers and underscores (${SAFE_OBJECT_NAME})` }),
+  /**
    * A type that only accepts URL-safe base64 strong secrets.
    */
   secret: () => z
@@ -183,4 +220,10 @@ export const zc = {
     .min(16, { message: 'must be at least 16 characters long' })
     .max(72, { message: 'let\'s not abuse though, keep it under 72 characters' })
     .regex(URL_SAFE_BASE64, { message: `must contain only characters from url-safe base64 (${URL_SAFE_BASE64})` }),
+  /**
+   * A type that only accepts storage sizes (e.g. 64MB, 1GB, etc).
+   */
+  storageSize: () => z
+    .string()
+    .refine(size.is, { error: 'must be a valid storage size (e.g. 64MB, 1GB, etc)' }),
 };
