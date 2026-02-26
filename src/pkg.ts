@@ -1,10 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { z } from 'zod/v4';
-import { _ } from './utils';
+
+import { semver } from './utils';
 
 /**
- * Subset of the package.json schema.
+ * @private Subset of the package.json schema.
+ * @since   18.0.0
+ * @version 1
  */
 const Package = z.object({
   version: z
@@ -13,9 +16,12 @@ const Package = z.object({
 });
 
 /**
- * Fetches the package.json file returning its parsed contents.
+ * @private Fetches the package.json file returning a subset of its
+ *          contents.
+ * @since   18.0.0
+ * @version 1
  */
-export const pkg = () => {
+const pkg = () => {
   const path = 'package.json';
   const abs = resolve(join(import.meta.dir, '../', path));
 
@@ -30,11 +36,15 @@ export const pkg = () => {
 };
 
 /**
- * The project's current version.
+ * @public  The project's current version.
+ * @since   18.0.0
+ * @version 1
  */
 export const version = () => pkg().version;
 
 /**
- * The project's current major version.
+ * @public  The project's current major version.
+ * @since   18.0.0
+ * @version 1
  */
-export const major = () => _.major(pkg().version);
+export const major = () => semver.major(pkg().version);

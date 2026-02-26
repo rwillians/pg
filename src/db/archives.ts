@@ -1,9 +1,15 @@
 import { table } from '@rwillians/qx';
+import { tc } from '../utils';
 
+/**
+ * @public  Keeps track of all WAL files archived to S3.
+ * @since   18.0.0
+ * @version 1
+ */
 export const archives = table('archives', t => ({
   id: t.integer().autoincrement().primaryKey(),
-  tar: t.string(),
-  size: t.integer(),
+  tar: tc.absolutePath(),
+  size: tc.bytesize(),
   createdAt: t.datetime(),
 }));
 

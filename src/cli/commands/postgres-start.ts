@@ -1,6 +1,6 @@
-import { contextualized, defineCommand, defineOptions } from '../command';
+import { defineCommand, withContext } from '../command';
 
-export const postgresStart = defineCommand(contextualized({
+export const postgresStart = defineCommand(withContext({
   signature: 'start',
   description: 'Starts the PostgreSQL server',
   handle: async (_argv, ctx) => {

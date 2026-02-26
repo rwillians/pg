@@ -154,5 +154,5 @@ export const createLogger = (options: CreateLoggerOptions) => {
 
 export const createQxLogger = (logger: Logger): ILogger => ({
   debug: (sql, params) => logger.debug(`${sql} ${JSON.stringify(params)}`),
-  error: (sql, params, error) => logger.error(`${sql} ${JSON.stringify(params)} - ${error?.stack}`),
+  error: (sql, params, error) => logger.error(`${sql} ${JSON.stringify(params)}\n\n${error?.name} ${error?.message}\n${error?.stack}`.trim()),
 });

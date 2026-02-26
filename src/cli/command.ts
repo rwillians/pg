@@ -22,7 +22,7 @@ export const defineCommand = <
 /**
  * Defines a cli command that depends on context.
  */
-export const contextualized = <
+export const withContext = <
   T extends Record<string, any> = {},
   S extends Record<string, any> = {},
 >(input: {

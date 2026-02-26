@@ -5,7 +5,7 @@ const options = defineOptions({
   length: {
     type: 'number',
     default: 32,
-    description: 'The length of the generated secret',
+    description: 'The desired secret length (in characters)',
   },
 });
 
