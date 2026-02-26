@@ -228,6 +228,12 @@ export const createFs = (config: Config, s3: S3Client) => {
       },
     },
     s3: {
+      /**
+       * @public  Instantiates a file from anywhere in S3.
+       * @since   18.0.0
+       * @version 1
+       */
+      file: (path: string) => new S3File(s3, path),
       archives: {
         /**
          * @public  Instantiates a file from under the s3 archives
