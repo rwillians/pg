@@ -167,6 +167,13 @@ export const createFs = (config: Config, s3: S3Client) => {
   const fs = {
     local: {
       /**
+       * @public  Resolves the given path related to the current
+       *          working directory..
+       * @since   18.0.0
+       * @version 1
+       */
+      join: (path: string) => resolve(CWD, path),
+      /**
        * @public  Instantiates a file from anywhere in the local
        *          filesystem.
        * @since   18.0.0
@@ -174,6 +181,12 @@ export const createFs = (config: Config, s3: S3Client) => {
        */
       file: (path: string) => new LocalFile(resolve(CWD, path)),
       state: {
+        /**
+         * @public  Joins the given path to the local state directory.
+         * @since   18.0.0
+         * @version 1
+         */
+        join: (path: string) => resolve(join(PG_STATE_DIR, path)),
         /**
          * @public  Instantiates a file from under the local state
          *          directory.
@@ -184,6 +197,12 @@ export const createFs = (config: Config, s3: S3Client) => {
       },
       data: {
         /**
+         * @public  Joins the given path to the local data directory.
+         * @since   18.0.0
+         * @version 1
+         */
+        join: (path: string) => resolve(join(PG_DATA_DIR, path)),
+        /**
          * @public  Instantiates a file from under the local Postgre's
          *          data directory.
          * @since   18.0.0
@@ -192,6 +211,13 @@ export const createFs = (config: Config, s3: S3Client) => {
         file: (path: string) => new LocalFile(resolve(join(PG_DATA_DIR, path)))
       },
       temp: {
+        /**
+         * @public  Joins the given path to the local temporary
+         *          directory.
+         * @since   18.0.0
+         * @version 1
+         */
+        join: (path: string) => resolve(join(PG_TEMP_DIR, path)),
         /**
          * @public  Instantiates a file from under the local temporary
          *          directory.
