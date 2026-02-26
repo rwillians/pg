@@ -60,7 +60,7 @@ export const pick = <T extends Record<string, any>, S extends keyof T>(
  * @since   18.0.0
  * @version 1
  */
-export const rand = <T>(options: T[]) => options[Math.floor(Math.random() * options.length)];
+export const rand = <T>(options: T[]) => options[Math.floor(Math.random() * options.length)]!;
 
 /**
  * @public  Converts a value that quacks like a string to an actual

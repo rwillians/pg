@@ -39,7 +39,7 @@ describe('.rescue(predicate, handler)(error)', () => {
   });
 
   describe('with a predicate function', () => {
-    const hasMessage = (err: unknown) => err instanceof Error && err.message.includes('not found');
+    const hasMessage = (err: unknown): err is Error => err instanceof Error && err.message.includes('not found');
     const handler = rescue(hasMessage, () => null);
 
     test('calls the handler when the predicate returns true', () => {

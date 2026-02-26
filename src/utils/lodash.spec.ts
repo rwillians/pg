@@ -82,7 +82,7 @@ describe('.pick(obj, keys)', () => {
   });
 
   test('ignores keys that do not exist', () => {
-    const result = pick({ a: 1 } as Record<string, number>, ['a', 'z']);
+    const result: Record<string, number> = pick({ a: 1 } as Record<string, number>, ['a', 'z']);
     expect(result).toEqual({ a: 1 });
   });
 
