@@ -1,4 +1,12 @@
 /**
+ * @public  Indicates an implementation error where the user inputed
+ *          an invalid argument.
+ * @since   18.0.0
+ * @version 1
+ */
+export class ArgumentError extends Error { };
+
+/**
  * @public  Any runtime-related error.
  * @since   18.0.0
  * @version 1

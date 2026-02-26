@@ -68,8 +68,10 @@ export const rand = <T>(options: T[]) => options[Math.floor(Math.random() * opti
  * @since   18.0.0
  * @version 1
  */
-export const toString = (value: StringLike) => typeof value === 'string'
-  ? value
+export const toString = (value: StringLike | null | undefined) =>
+    value === undefined ? ''
+  : value === null ? ''
+  : typeof value === 'string' ? value
   : value.toString();
 
 /**

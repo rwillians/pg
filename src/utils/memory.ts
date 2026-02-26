@@ -15,11 +15,34 @@ const MULTIPLIERS = {
 } as const;
 
 /**
- * @private Matches a valid memory size string.
+ * @public  Pattern that matches a valid memory size string.
  * @since   18.0.0
  * @version 1
  */
-const PATTERN = regex('^(\\d+)(B|KB|MB|GB|TB)$');
+export const PATTERN = regex('^(\\d+)((K|M|G|T)?B)$');
+
+/**
+ * @public  The type of a memory size string.
+ * @since   18.0.0
+ * @version 1
+ */
+export type Size = typeof PATTERN.infer;
+
+/**
+ * @public  Pattern that matches the head of the memory size string
+ *          (the numeric value).
+ * @since   18.0.0
+ * @version 1
+ */
+export const HEAD = regex('^\\d+');
+
+/**
+ * @public  Pattern that matches the tail of the memory size string
+ *          (the memory unit).
+ * @since   18.0.0
+ * @version 1
+ */
+export const TAIL = regex('(K|M|G|T)?B$');
 
 /**
  * @private Converts a memory size string to its value in bytes.
@@ -31,17 +54,17 @@ const bytes = (input: string): number => {
   if (!match) throw new ArgumentError(`Invalid size: ${input}`);
 
   const [, value, unit] = match;
+  const size = parseInt(value, 10);
 
-  return parseInt(value, 10) * MULTIPLIERS[unit];
+  return size * MULTIPLIERS[unit];
 };
 
 /**
- * @public  Checks whether the given string is a valid memory size
- *          (e.g. `128MB`, `512GB`).
+ * @public  Returns true if the input string is a valid memory size.
  * @since   18.0.0
  * @version 1
  */
-export const valid = (input: string): boolean => PATTERN.test(input);
+export const valid = (input: string) => PATTERN.test(input);
 
 /**
  * @public  Returns true if the input memory size is greater than or
@@ -49,7 +72,9 @@ export const valid = (input: string): boolean => PATTERN.test(input);
  * @since   18.0.0
  * @version 1
  */
-export const gte = (input: string, min: string): boolean => bytes(input) >= bytes(min);
+export const gte = (min: string | undefined) => min === undefined
+  ? () => true
+  : (input: string) => bytes(input) >= bytes(min);
 
 /**
  * @public  Returns true if the input memory size is less than or
@@ -57,4 +82,6 @@ export const gte = (input: string, min: string): boolean => bytes(input) >= byte
  * @since   18.0.0
  * @version 1
  */
-export const lte = (input: string, max: string): boolean => bytes(input) <= bytes(max);
+export const lte = (max: string | undefined) => max === undefined
+  ? () => true
+  : (input: string) => bytes(input) <= bytes(max);

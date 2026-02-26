@@ -28,17 +28,17 @@ export const walArchive = defineCommand(withContext({
     const { path, filename } = argv;
     const { db, fs, log } = ctx;
 
-    const segment = fs.local.file(path);
+    const segment = fs.local.data.file(path);
     const ltar = fs.local.temp.file(`${filename}.tar.gz`);
     const star = fs.s3.archives.file(`${filename}.tar.gz`);
 
     if (!await fs.exists(segment)) {
-      log.error(`WAL segment file not found: ${ascii.red(segment.path)}`);
+      log.error(`WAL segment file not found: ${ascii.red(segment.url)}`);
       process.exit(1);
     }
 
     log.debug('Compressing file');
-    await $`tar -zcf ${ltar.path} ${path}`.text();
+    await $`tar -zcf ${ltar.path} ${segment.path}`.text();
     const size = await fs.size(ltar);
 
     log.debug(`Uploading WAL segument ${ascii.blue(filename)} to S3`);

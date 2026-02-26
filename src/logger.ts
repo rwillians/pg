@@ -36,6 +36,7 @@ type LogLevel = typeof PG_LOG_LEVELS_RFC5424[keyof typeof PG_LOG_LEVELS_RFC5424]
  * @version 1
  */
 type Payload = {
+  pid: number;
   message: string;
   timestamp: Date;
 };
@@ -48,6 +49,7 @@ type Payload = {
 type Config = {
   format: (config: Config, payload: Payload) => string;
   logLevel: LogLevel;
+  pid: number;
 };
 
 /**
@@ -64,11 +66,13 @@ export type Formatter = (config: Config, payload: Payload) => string;
  * @version 1
  */
 export const prettyprint: Formatter = (config, payload) => {
-  const { message, timestamp } = payload;
+  const { pid, message, timestamp } = payload;
   const [date, time] = timestamp.toISOString().split('T');
   const ts = [date!, time!.slice(0, -1), 'UTC'].join(' ')
 
   return ascii.dim(ts)
+    + ' '
+    + ascii.dim(`[${pid}]`)
     + ' '
     + config.logLevel.colors.accent(config.logLevel.short)
     + ' '
@@ -83,7 +87,7 @@ export const prettyprint: Formatter = (config, payload) => {
  * @version 1
  */
 const getLogFn = (config: Config): ((message: string) => void) => {
-  const { format, logLevel } = config;
+  const { format, logLevel, pid } = config;
 
   const stream = logLevel.code <= PG_LOG_LEVELS_RFC5424.error.code
     ? process.stderr
@@ -94,6 +98,7 @@ const getLogFn = (config: Config): ((message: string) => void) => {
     : message;
 
   return (message: string | Error) => stream.write(format(config, {
+    pid,
     message: parse(message),
     timestamp: new Date(),
   }));
@@ -105,10 +110,11 @@ const getLogFn = (config: Config): ((message: string) => void) => {
  * @version 1
  */
 const getMetricFn = (config: Config) => {
-  const { format } = config;
+  const { format, pid } = config;
   const stream = process.stdout;
 
   return (name: string, value: number) => stream.write(format(config, {
+    pid,
     message: `${name}=${value}`,
     timestamp: new Date(),
   }));
@@ -155,6 +161,7 @@ type CreateLoggerOptions = {
   level?: keyof typeof PG_LOG_LEVELS_RFC5424;
   silent?: boolean;
   formatter?: Formatter;
+  pid?: number;
 };
 
 /**
@@ -168,6 +175,7 @@ export const createLogger = (options: CreateLoggerOptions = {}) => {
     level = 'info',
     silent = false,
     formatter: format = prettyprint,
+    pid = process.pid,
   } = options;
 
   const targetLogLevel = silent
@@ -180,13 +188,13 @@ export const createLogger = (options: CreateLoggerOptions = {}) => {
     const logLevel = PG_LOG_LEVELS_RFC5424[method];
 
     logger[method] = logLevel.code <= targetLogLevel.code
-      ? getLogFn({ format, logLevel })
+      ? getLogFn({ format, logLevel, pid })
       : (_message: string | Error) => void 0;
   }
 
   logger.metric = silent
     ? (_name: string, _value: number) => void 0
-    : getMetricFn({ format, logLevel: buildMetricsCustomLogLevel(PG_LOG_LEVELS_RFC5424.debug) });
+    : getMetricFn({ format, logLevel: buildMetricsCustomLogLevel(PG_LOG_LEVELS_RFC5424.debug), pid });
 
   return logger as Logger;
 };

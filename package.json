@@ -9,11 +9,14 @@
     "bun": "^1.3.9"
   },
   "scripts": {
-    "compile": "bun build --compile --outfile=dist/pg src/cli.ts && chmod +x dist/pg",
-    "test": "bun run --bun tsc --noEmit && bun test src/**/*.spec.ts"
+    "pretest": "bun run --bun tsc --noEmit",
+    "test": "bun test src/**/*.spec.ts",
+    "precompile": "bun run test",
+    "compile": "bun build --compile --outfile=dist/pg src/cli.ts && chmod +x dist/pg"
   },
   "dependencies": {
     "@rwillians/qx": "^0.1.21",
+    "arkregex": "^0.0.5",
     "yargs": "^18.0.0",
     "zod": "^4.3.6"
   },

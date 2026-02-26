@@ -29,6 +29,14 @@ export const mapValues = <T extends Record<string, any>, S>(mapper: (value: T[ke
   (obj: T): { [K in keyof T]: S } => _.mapValues(obj, mapper);
 
 /**
+ * @public  Returns a function that matches the given string against
+ *          the specified regex.
+ * @since   18.0.0
+ * @version 1
+ */
+export const matches = <T extends RegExp>(pattern: T) => (str: string) => pattern.test(str);
+
+/**
  * @public  Negates the result of the given predicate function.
  * @since   18.0.0
  * @version 1

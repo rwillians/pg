@@ -1,19 +1,21 @@
-import type { BunFile, S3Client, S3File as BunS3File } from 'bun';
-import { dirname, join, resolve } from 'node:path';
+import type { BunFile as BunLocalFile, S3Client, S3File as BunS3File } from 'bun';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { CryptoHasher, write } from 'bun';
 import { ReadOnlyError } from './errors';
 import { type Config } from './config';
-import { _, p } from './utils';
+import { _, p, raise } from './utils';
 
 /**
- * @private Resolves the path prefix in S3 for the given database slug
- *          and purpose-specific directory path.
+ * @private Resolves the absolute path of a namespace path in S3,
+ *          prefixing it for cluster isolation when a slug is
+ *          provided.
  * @since   18.0.0
  * @version 1
  */
-const prefix = (path: string, { slug }: { slug?: string } = {}) => slug
-  ? join(`/clusters/${slug}`, path)
-  : path;
+const namespace = (namespace: string, { slug }: { slug?: string } = {}) =>
+    isAbsolute(namespace) === false ? raise(new Error('namespace must be an absolute path'))
+  : slug                            ? join(`/clusters/${slug}`, namespace)
+  : namespace;
 
 /**
  * @private Calculates the SHA-256 hash of the given data.
@@ -31,7 +33,19 @@ const sha256 = async (data: Uint8Array<ArrayBuffer>) => new CryptoHasher('sha256
  * @version  1
  */
 class LocalFile {
-  public readonly $native: BunFile;
+  /**
+   * @ignore
+   * @private  Bun's native local file instance, hidden away to make
+   *           it easier to enforce read-only access.
+   */
+  public readonly '~native': BunLocalFile;
+
+  /**
+   * @public  The name of the file, derived from its path.
+   * @since   18.0.0
+   * @version 1
+   */
+  public readonly name: string;
 
   /**
    * @public  The absolute path to the file in the local filesystem.
@@ -41,16 +55,22 @@ class LocalFile {
   public readonly path: string;
 
   /**
-   * @public  The name of the file, derived from its path.
+   * @public  The absolute path to the file in the local filesystem
+   *          as a URL.
    * @since   18.0.0
    * @version 1
    */
-  public readonly name: string;
+  public readonly url: string;
 
-  constructor(path: string, relativeTo: string = process.cwd()) {
-    this.$native = Bun.file(path);
-    this.path = path.startsWith('/') ? path : resolve(join(relativeTo, path));
-    this.name = this.path.split('/').slice(-1)[0]!;
+  /**
+   * @param {string} path The absolute path to the file in the local
+   *                      filesystem.
+   */
+  constructor(path: string) {
+    this['~native'] = Bun.file(path);
+    this.name = basename(path);
+    this.path = path;
+    this.url = `file:/${path}`;
   }
 }
 
@@ -61,7 +81,12 @@ class LocalFile {
  * @version  1
  */
 class S3File {
-  public readonly $native: BunS3File;
+  /**
+   * @ignore
+   * @private  Bun's native S3 file instance, hidden away to make it
+   *           easier to enforce read-only access.
+   */
+  public readonly '~native': BunS3File;
 
   /**
    * @public  The name of the S3 bucket where the file is located.
@@ -71,6 +96,13 @@ class S3File {
   public readonly bucket: string;
 
   /**
+   * @public  The name of the file, derived from its path.
+   * @since   18.0.0
+   * @version 1
+   */
+  public readonly name: string;
+
+  /**
    * @public  The absolute path to the file in the local filesystem.
    * @since   18.0.0
    * @version 1
@@ -78,17 +110,22 @@ class S3File {
   public readonly path: string;
 
   /**
-   * @public  The name of the file, derived from its path.
+   * @public  The absolute path to the file in S3 as a URL.
    * @since   18.0.0
    * @version 1
    */
-  public readonly name: string;
+  public readonly url: string;
 
+  /**
+   * @param {S3Client} s3   Bun's S3 client instance.
+   * @param {string}   path The absolute path to the file in S3.
+   */
   constructor(s3: S3Client, path: string) {
-    this.$native = s3.file(path);
-    this.bucket = this.$native.bucket!;
-    this.path = `s3://${this.bucket}/` + _.trimLeading(path, '/');
-    this.name = path.split('/').slice(-1)[0]!;
+    this['~native'] = s3.file(path);
+    this.bucket = this['~native'].bucket!;
+    this.name = basename(path);
+    this.path = path;
+    this.url = `s3://${this.bucket}${this.path}`;
   }
 }
 
@@ -104,16 +141,23 @@ export type AnyFile = LocalFile | S3File;
  * @public  Creates an abstraction over the filesystem, providing
  *          functions for working with both the local filesystem and
  *          S3.
+ *
+ *          The file types available to user-land only exposes a
+ *          subset of Bun's file API. That so we can centralize all
+ *          reads and writes operations to the fs instance returned by
+ *          this function, which makes it easier to enforce read-only
+ *          access to files when pg is in read-only mode.
  * @since   18.0.0
  * @version 1
  */
 export const createFs = (config: Config, s3: S3Client) => {
-  const S3_ARCHIVES_PREFIX = prefix(config.S3_ARCHIVES_PREFIX, { slug: config.PG_CLUSTER_SLUG});
-  const S3_BACKUPS_PREFIX = prefix(config.S3_BACKUPS_PREFIX, { slug: config.PG_CLUSTER_SLUG});
+  const S3_ARCHIVES_NAMESPACE = namespace(config.S3_ARCHIVES_PREFIX, { slug: config.PG_CLUSTER_SLUG });
+  const S3_BACKUPS_NAMESPACE = namespace(config.S3_BACKUPS_PREFIX, { slug: config.PG_CLUSTER_SLUG });
   const PG_READONLY_MODE = config.PG_READONLY_MODE;
   const PG_STATE_DIR = config.PG_STATE_DIR;
   const PG_TEMP_DIR = config.PG_TEMP_DIR;
-  const PGDATA = config.PGDATA;
+  const PG_DATA_DIR = config.PGDATA;
+  const CWD = process.cwd();
 
   /**
    * @public  Functions for working with the filesystem, both local
@@ -128,7 +172,7 @@ export const createFs = (config: Config, s3: S3Client) => {
        * @since   18.0.0
        * @version 1
        */
-      file: (path: string) => new LocalFile(path),
+      file: (path: string) => new LocalFile(resolve(CWD, path)),
       state: {
         /**
          * @public  Instantiates a file from under the local state
@@ -136,7 +180,7 @@ export const createFs = (config: Config, s3: S3Client) => {
          * @since   18.0.0
          * @version 1
          */
-        file: (path: string) => new LocalFile(path, PG_STATE_DIR),
+        file: (path: string) => new LocalFile(resolve(join(PG_STATE_DIR, path))),
       },
       data: {
         /**
@@ -145,7 +189,7 @@ export const createFs = (config: Config, s3: S3Client) => {
          * @since   18.0.0
          * @version 1
          */
-        file: (path: string) => new LocalFile(path, PGDATA)
+        file: (path: string) => new LocalFile(resolve(join(PG_DATA_DIR, path)))
       },
       temp: {
         /**
@@ -154,7 +198,7 @@ export const createFs = (config: Config, s3: S3Client) => {
          * @since   18.0.0
          * @version 1
          */
-        file: (path: string) => new LocalFile(path, PG_TEMP_DIR),
+        file: (path: string) => new LocalFile(resolve(join(PG_TEMP_DIR, path))),
       },
     },
     s3: {
@@ -165,7 +209,7 @@ export const createFs = (config: Config, s3: S3Client) => {
          * @since   18.0.0
          * @version 1
          */
-        file: (name: string) => new S3File(s3, join(S3_ARCHIVES_PREFIX, name)),
+        file: (name: string) => new S3File(s3, resolve(join(S3_ARCHIVES_NAMESPACE, name))),
       },
       backups: {
         /**
@@ -174,7 +218,7 @@ export const createFs = (config: Config, s3: S3Client) => {
          * @since   18.0.0
          * @version 1
          */
-        file: (name: string) => new S3File(s3, join(S3_BACKUPS_PREFIX, name)),
+        file: (name: string) => new S3File(s3, resolve(join(S3_BACKUPS_NAMESPACE, name))),
       },
     },
     /**
@@ -183,7 +227,7 @@ export const createFs = (config: Config, s3: S3Client) => {
      * @since   18.0.0
      * @version 1
      */
-    bytes: async (file: AnyFile) => file.$native.bytes(),
+    bytes: async (file: AnyFile) => file['~native'].bytes(),
     /**
      * @public  Copies the contents of a source file into a
      *          destination file, doesn't matter if either or both are
@@ -193,7 +237,7 @@ export const createFs = (config: Config, s3: S3Client) => {
      */
     cp: async (source: AnyFile, destination: AnyFile) => PG_READONLY_MODE && destination instanceof S3File
       ? p.reject(new ReadOnlyError('write file to s3'))
-      : write(destination.$native, source.$native),
+      : write(destination['~native'], source['~native']),
     /**
      * @public  Gets the directory name of a given path or file,
      *          whether local or in S3.
@@ -206,7 +250,7 @@ export const createFs = (config: Config, s3: S3Client) => {
      * @since   18.0.0
      * @version 1
      */
-    exists: async (file: AnyFile) => file.$native.exists(),
+    exists: async (file: AnyFile) => file['~native'].exists(),
     /**
      * @public  Deletes a file, whether local or in S3.
      * @since   18.0.0
@@ -214,7 +258,7 @@ export const createFs = (config: Config, s3: S3Client) => {
      */
     rm: async (file: AnyFile) => PG_READONLY_MODE && file instanceof S3File
       ? p.reject(new ReadOnlyError('delete file from s3'))
-      : file.$native.unlink(),
+      : file['~native'].unlink(),
     /**
      * @public  Calculate the SHA-256 hash of a local file.
      *
@@ -233,7 +277,7 @@ export const createFs = (config: Config, s3: S3Client) => {
      * @since   18.0.0
      * @version 1
      */
-    size: async (file: AnyFile) => file.$native.stat().then(stat => stat.size),
+    size: async (file: AnyFile) => file['~native'].stat().then(stat => stat.size),
   };
 
   return fs;

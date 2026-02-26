@@ -1,19 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import * as semver from './semver';
 import { z } from 'zod/v4';
-
-/**
- * @private Semantic versioning utility functions.
- * @since   18.0.0
- */
-const semver = {
-  /**
-   * @public  Extracts the major version from the given semver string.
-   * @since   18.0.0
-   * @version 1
-   */
-  major: (semver: string) => semver.split('.')[0]!,
-};
 
 /**
  * @private Subset of the package.json schema.
@@ -23,7 +11,7 @@ const semver = {
 const Package = z.object({
   version: z
     .string()
-    .regex(/^\d+\.\d+\.\d+(-[a-z0-9_\-\.]+)?$/, { message: 'must be a valid semver version' }),
+    .refine(semver.valid, { message: 'must be a valid semver version' }),
 });
 
 /**

@@ -8,6 +8,7 @@ export * as postgres from './utils/postgres';
 export { halt, sleepWhile } from './utils/process';
 export * as proc from './utils/process';
 export * as p from './utils/promise';
+export * as semver from './utils/semver';
 export { noop, raise } from './utils/syntax-sugar';
 export * from './utils/terminal';
 export * as time from './utils/time';

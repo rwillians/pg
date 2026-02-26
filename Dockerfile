@@ -18,8 +18,6 @@ RUN apk add --no-cache tini
 COPY --from=build /app/dist/pg /usr/local/bin/pg
 
 USER postgres
-ENV USER=postgres
-
 WORKDIR /var/lib/pg
 
 VOLUME /var/lib/pg

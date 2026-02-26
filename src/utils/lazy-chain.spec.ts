@@ -2,19 +2,19 @@ import { describe, expect, test } from 'bun:test';
 import { LazyChain, lazy } from './lazy-chain';
 
 describe('LazyChain', () => {
-  describe('.join', () => {
+  describe('.join(value)', () => {
     test('creates a fulfilled chain', () => {
       expect(LazyChain.join(42).unwrap()).toBe(42);
     });
   });
 
-  describe('.reject', () => {
+  describe('.reject(error)', () => {
     test('creates a rejected chain that throws on unwrap', () => {
       expect(() => LazyChain.reject('boom').unwrap()).toThrow('boom');
     });
   });
 
-  describe('#then', () => {
+  describe('.then(cb)', () => {
     test('transforms the value', () => {
       const result = LazyChain.join(2)
         .then((v) => v * 3)
@@ -48,7 +48,7 @@ describe('LazyChain', () => {
     });
   });
 
-  describe('#catch', () => {
+  describe('.catch(cb)', () => {
     test('recovers from a rejection', () => {
       const result = LazyChain.reject('fail')
         .catch((err) => `recovered: ${err}`)
@@ -73,7 +73,7 @@ describe('LazyChain', () => {
     });
   });
 
-  describe('then + catch mixed', () => {
+  describe('.catch(cb).then(cb)', () => {
     test('catch recovers and then continues', () => {
       const result = LazyChain.reject('err')
         .catch(() => 5)
@@ -167,7 +167,7 @@ describe('LazyChain', () => {
   });
 });
 
-describe('lazy', () => {
+describe('lazy(value)', () => {
   test('behaves the same as LazyChain.join', () => {
     const result = lazy(2)
       .then((v) => v * 3)

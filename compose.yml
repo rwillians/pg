@@ -12,7 +12,8 @@ services:
       - minio-data:/data
   postgres:
     build: .
-    command: debug busy
+    command: postgres start
+    # command: debug busy
     environment:
       - POSTGRES_USER=EMHEDUKiXhksaoYo
       - POSTGRES_PASSWORD=mDQf6JnxNxRRktv4nZ5XRyjFekSQg07gOVehEukxuVT6VYL3_AOxL2URBb7PdDVb
