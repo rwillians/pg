@@ -1,10 +1,9 @@
-import { S3Client } from 'bun';
-
 import { ConfigError, loadConfig } from './config';
 import { connect, migreate } from './db';
 import { createLogger } from './logger';
-import { halt, p } from './utils';
+import { p, proc } from './utils';
 import { createFs } from './fs';
+import { S3Client } from 'bun';
 
 /**
  * @public  Initializes the full context needed for most pg commands.
@@ -12,11 +11,11 @@ import { createFs } from './fs';
  * @version 1
  */
 export const createContext = async (env: Bun.Env) => {
-  const config = await loadConfig(env).catch(p.rescue(ConfigError, halt(1)));
+  const config = await loadConfig(env).catch(p.rescue(ConfigError, proc.halt(1)));
 
   const log = createLogger({
     level: config.PG_LOG_LEVEL,
-    silent: config.PG_SILENCE_IO,
+    silent: config.PG_SILENCED_LOGS,
   });
 
   const db = await connect(config, log);
@@ -34,8 +33,13 @@ export const createContext = async (env: Bun.Env) => {
 
   const ac = new AbortController();
   const signal = ac.signal;
+  const halt = (reason?: string | number) => { ac.abort(reason); }
 
-  return { ac, config, db, fs, log, signal };
+  process.on('SIGINT', () => ac.abort())
+         .on('SIGTERM', () => ac.abort())
+         .on('SIGKILL', () => ac.abort());
+
+  return { config, db, fs, halt, log, signal };
 };
 
 /**

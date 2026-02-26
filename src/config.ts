@@ -1,8 +1,7 @@
-import { z } from 'zod/v4';
-
-import { p, s, zc } from './utils';
-import { major } from './pkg' with { type: 'macro' };
+import { major } from './utils/macros' with { type: 'macro' };
 import { RuntimeError } from './errors';
+import { ascii, p, zc } from './utils';
+import { z } from 'zod/v4';
 
 /**
  * @private Runtime environment.
@@ -17,34 +16,6 @@ const NODE_ENV = process.env.NODE_ENV || 'prod';
  */
 const Schema = z.object({
   // // // // // // // // // // // // // // // // // // // // // // //
-  // PASS-THROUGH TO POSTGRES CONFIGURATIONS                        //
-  // configurations passed through to docker-entrypoint.sh          //
-  // // // // // // // // // // // // // // // // // // // // // // //
-
-  /**
-   * @required The username to connect to the database with.
-   * @since    18.0.0
-   * @version  1
-   */
-  POSTGRES_USER: zc
-    .objectname()
-    .refine(str => str !== 'postgres', { error: 'cannot be postgres' }),
-
-  /**
-   * @required A strong password to connect to the database with.
-   * @since    18.0.0
-   * @version  1
-   */
-  POSTGRES_PASSWORD: zc.secret(),
-
-  /**
-   * @required The name of the database to connect to.
-   * @since    18.0.0
-   * @version  1
-   */
-  POSTGRES_DB: zc.objectname(),
-
-  // // // // // // // // // // // // // // // // // // // // // // //
   // PG CLI SETTINGS                                                //
   // // // // // // // // // // // // // // // // // // // // // // //
 
@@ -52,10 +23,10 @@ const Schema = z.object({
    * @optional The slug that identifies the PostgreSQL cluster. When
    *           present, pg files are be stored under a directory named
    *           after the slug.
-  *
-  *            This allows multiple clusters to safely share the same
-  *            S3 bucket by isolating their files in different
-  *            directories.
+   *
+   *           This allows multiple clusters to safely share the same
+   *           S3 bucket by isolating their files in different
+   *           directories.
    * @since    18.0.0
    * @version  1
    */
@@ -69,14 +40,14 @@ const Schema = z.object({
   PG_LOG_LEVEL: z.enum(['debug', 'info', 'notice', 'warning', 'error']).default('info'),
 
   /**
-   * @optional Mutes all output except for warnings and errors.
+   * @optional Mutes all logs except for warnings and errors.
    *
    *           **HINT:** This is particularly useful for testing to
    *           avoid cluttering test output with pg logs.
    * @since    18.0.0
    * @version  1
    */
-  PG_SILENCE_IO: z.coerce.boolean().default(NODE_ENV === 'test'),
+  PG_SILENCED_LOGS: z.coerce.boolean().default(NODE_ENV === 'test'),
 
   /**
    * @optional Defines the directory where pg stores its state.
@@ -114,6 +85,49 @@ const Schema = z.object({
   PG_TEMP_DIR: zc.absolutePath().default('/tmp/pg'),
 
   /**
+   * @optional Puts pg in read-only mode, this means - but not limited
+   *           to:
+   *
+   *           - will error if requested to archive WAL segments;
+   *           - will error if requested to create database backups;
+   *           - will error if requested to upload the state database
+   *             to S3.
+   *           - will error if requested to prune archives on S3; and
+   *           - will error if requested to prune backups on S3.
+   *
+   *           The gist of it is that doing stuff that would create,
+   *           update or delete data in S3 are blocked.
+   * @since    18.0.0
+   * @version  1
+   */
+  PG_READONLY_MODE: z.coerce.boolean().default(false),
+
+  // // // // // // // // // // // // // // // // // // // // // // //
+  // POSTGRES CONFIGURATIONS                                        //
+  // // // // // // // // // // // // // // // // // // // // // // //
+
+  /**
+   * @required The username to connect to the database with.
+   * @since    18.0.0
+   * @version  1
+   */
+  POSTGRES_USER: zc.username(),
+
+  /**
+   * @required A strong password to connect to the database with.
+   * @since    18.0.0
+   * @version  1
+   */
+  POSTGRES_PASSWORD: zc.secret(),
+
+  /**
+   * @required The name of the database to connect to.
+   * @since    18.0.0
+   * @version  1
+   */
+  POSTGRES_DB: zc.objectname(),
+
+  /**
    * @optional Defines the maximum number of connections allowed.
    * @since    18.0.0
    * @version  1
@@ -144,24 +158,6 @@ const Schema = z.object({
    * @version  1
    */
   POSTGRES_MAX_WAL_SIZE: zc.memsize().default('128MB'),
-
-  /**
-   * @optional Puts pg in read-only mode, this means - but not limited
-   *           to:
-   *
-   *           - will error if requested to archive WAL segments;
-   *           - will error if requested to create database backups;
-   *           - will error if requested to upload the state database
-   *             to S3.
-   *           - will error if requested to prune archives on S3; and
-   *           - will error if requested to prune backups on S3.
-   *
-   *           The gist of it is that doing stuff that would create,
-   *           update or delete data in S3 are blocked.
-   * @since    18.0.0
-   * @version  1
-   */
-  PG_READONLY_MODE: z.coerce.boolean().default(false),
 
   // // // // // // // // // // // // // // // // // // // // // // //
   // S3-COMPATIBLE STORAGE                                          //
@@ -347,26 +343,19 @@ const Schema = z.object({
    * @since    18.0.0
    * @version  1
    */
-  PGDATA: z.literal(`/var/lib/postgresql/${major()}/data`),
-
-  /**
-   * @required Asserts that pg is running under the expected OS user.
-   * @since    18.0.0
-   * @version  1
-   */
-  USER: z.literal('postgres'),
+  PGDATA: z.literal(`/var/lib/postgresql/${major()}/docker`),
 });
 
 /**
- * @private Removes the "Invalid input: " prefix present in each
- *          issue from {@link ZodError}.
+ * @private Prunes {@link ZodError} issue messages to be more
+ *          human-readable.
  * @since   18.0.0
  * @version 1
  */
 const prune = (msg: string) => msg.replace(/^Invalid input\: /, '');
 
 /**
- * @public  A runtime validation error.
+ * @public  Error indicating issues with the configuration.
  * @since   18.0.0
  * @version 1
  */
@@ -378,6 +367,11 @@ export class ConfigError extends RuntimeError {
    */
   public readonly issues: z.ZodError['issues'];
 
+  /**
+   * @param {z.ZodError} error The original {@link z.ZodError} thrown
+   *                           after failing to parse / validate the
+   *                           configuration.
+   */
   constructor(error: z.ZodError) {
     super('One or more environment variables are either missing or invalid', error, error.stack);
     this.issues = error.issues;
@@ -389,12 +383,14 @@ export class ConfigError extends RuntimeError {
    * @version 1
    */
   public override toString(opts: { pretty: boolean } = { pretty: true }) {
-    const red = s.maybe(s.red, { if: opts.pretty });
+    const red = ascii.maybe(ascii.red, { if: opts.pretty });
 
     const issues = this
       .issues
-      .filter(({ message }) => (message ?? '').trim() !== '')
-      .map(({ path, message }) => `- field ${red(path.join('.'))} ${prune(message)}`)
+      .map(({ path, message }) => [path.join('.'), (message ?? '').trim()] as const)
+      .filter(([, message]) => message !== '')
+      .sort(([a,], [b,]) => a.localeCompare(b))
+      .map(([path, message]) => `- field ${red(path)} ${prune(message)}`)
       .join('\n');
 
     return `${this.message}:\n\n${issues}\n\n`;
@@ -413,8 +409,8 @@ export type Config = z.infer<typeof Schema>;
  *          variables. If invalid, it pretty prints the errors then
  *          exits with code 1.
  *
- *          Returns a promise since pg might accept other sources of
- *          configuration in the future that require async IO.
+ *          Returns a promise since pg will accept other sources of
+ *          configuration that require async IO in the future.
  * @since   18.0.0
  * @version 1
  */

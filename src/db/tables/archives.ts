@@ -1,5 +1,5 @@
+import { tc } from '../custom-columns';
 import { table } from '@rwillians/qx';
-import { tc } from '../utils';
 
 /**
  * @public  Keeps track of all WAL files archived to S3.

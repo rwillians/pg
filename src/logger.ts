@@ -1,70 +1,88 @@
-import { type ILogger } from '@rwillians/qx';
-import { _, style as s } from './utils';
+import { type Paint, _, ascii } from './utils';
 
 /**
- * Map of all severities, following the RFC 5424 standard.
+ * @private Map of all severities, following the RFC 5424 standard.
+ * @since   18.0.0
+ * @version 1
+ *
  * @see https://www.npmjs.com/package/winston#user-content-logging-levels
  */
-export const PG_LOG_LEVELS_RFC5424 = {
-  emerg:   { code: 0, severity: 'EMERGENCY', short: 'EMG', colors: { accent: s.red       } },
-  alert:   { code: 1, severity: 'ALERT',     short: 'ALT', colors: { accent: s.red       } },
-  crit:    { code: 2, severity: 'CRITICAL',  short: 'CRT', colors: { accent: s.red       } },
-  error:   { code: 3, severity: 'ERROR',     short: 'ERR', colors: { accent: s.red       } },
-  warning: { code: 4, severity: 'WARNING',   short: 'WRN', colors: { accent: s.brightRed } },
-  notice:  { code: 5, severity: 'NOTICE',    short: 'NOT', colors: { accent: s.yellow    } },
-  info:    { code: 6, severity: 'INFO',      short: 'INF', colors: { accent: s.green     } },
-  debug:   { code: 7, severity: 'DEBUG',     short: 'DBG', colors: { accent: s.blue      } },
+const PG_LOG_LEVELS_RFC5424 = {
+  emerg:   { code: 0, severity: 'EMERGENCY', short: 'EMG', colors: { accent: ascii.red       } },
+  alert:   { code: 1, severity: 'ALERT',     short: 'ALT', colors: { accent: ascii.red       } },
+  crit:    { code: 2, severity: 'CRITICAL',  short: 'CRT', colors: { accent: ascii.red       } },
+  error:   { code: 3, severity: 'ERROR',     short: 'ERR', colors: { accent: ascii.red       } },
+  warning: { code: 4, severity: 'WARNING',   short: 'WRN', colors: { accent: ascii.brightRed } },
+  notice:  { code: 5, severity: 'NOTICE',    short: 'NOT', colors: { accent: ascii.yellow    } },
+  info:    { code: 6, severity: 'INFO',      short: 'INF', colors: { accent: ascii.green     } },
+  debug:   { code: 7, severity: 'DEBUG',     short: 'DBG', colors: { accent: ascii.blue      } },
 } as const;
 
-export type LogLevelKey = 'debug' | 'info' | 'notice' | 'warning' | 'error';
-export type MetricLogLevelKey = 'debug' | 'info' | 'notice';
-
 /**
- * @private
+ * @private The shape of a log level definition.
+ * @since   18.0.0
+ * @version 1
  */
-type LogLevel = {
-  code: typeof PG_LOG_LEVELS_RFC5424[keyof typeof PG_LOG_LEVELS_RFC5424]['code'];
-  severity: string;
-  short: string;
-  colors: { accent: (str: string) => string };
+type LogLevel = typeof PG_LOG_LEVELS_RFC5424[keyof typeof PG_LOG_LEVELS_RFC5424] | {
+  code: number;
+  severity: 'METRIC',
+  short: 'MET',
+  colors: { accent: Paint };
 };
 
 /**
- * @private
+ * @private The shape of a payload passed to formatter functions.
+ * @since   18.0.0
+ * @version 1
  */
-type FormatterPayload = {
+type Payload = {
   message: string;
   timestamp: Date;
 };
 
 /**
- * @private
+ * @private The shape of a log formatter configuration object.
+ * @since   18.0.0
+ * @version 1
  */
-type FormatterConfig = {
-  format: (config: FormatterConfig, payload: FormatterPayload) => string;
+type Config = {
+  format: (config: Config, payload: Payload) => string;
   logLevel: LogLevel;
 };
 
 /**
- * @private
+ * @public  The type definition for a log formatter function.
+ * @since   18.0.0
+ * @version 1
  */
-const prettyprint = (config: FormatterConfig, payload: FormatterPayload): string => {
+export type Formatter = (config: Config, payload: Payload) => string;
+
+/**
+ * @private A simple log formatter that outputs color-coded logs with
+ *          timestamps.
+ * @since   18.0.0
+ * @version 1
+ */
+export const prettyprint: Formatter = (config, payload) => {
   const { message, timestamp } = payload;
   const [date, time] = timestamp.toISOString().split('T');
   const ts = [date!, time!.slice(0, -1), 'UTC'].join(' ')
 
-  return s.dim(ts)
+  return ascii.dim(ts)
     + ' '
     + config.logLevel.colors.accent(config.logLevel.short)
     + ' '
-    + s.default(message)
+    + ascii.default(message)
     + '\n';
 };
 
 /**
- * @private
+ * @private Factory function that creates a log method for a given log
+ *          level.
+ * @since   18.0.0
+ * @version 1
  */
-const getLogFn = (config: FormatterConfig): ((message: string) => void) => {
+const getLogFn = (config: Config): ((message: string) => void) => {
   const { format, logLevel } = config;
 
   const stream = logLevel.code <= PG_LOG_LEVELS_RFC5424.error.code
@@ -82,59 +100,80 @@ const getLogFn = (config: FormatterConfig): ((message: string) => void) => {
 };
 
 /**
- * @private
+ * @private Factory function that creates a metric log method.
+ * @since   18.0.0
+ * @version 1
  */
-const getMetricFn = (config: FormatterConfig) => {
+const getMetricFn = (config: Config) => {
   const { format } = config;
   const stream = process.stdout;
 
   return (name: string, value: number) => stream.write(format(config, {
-    message: `metric ${name}=${value}`,
+    message: `${name}=${value}`,
     timestamp: new Date(),
   }));
 };
 
 /**
- * @private
+ * @private Helper function that builds a custom log level for
+ *          metrics, based on an existing log level's code and colors.
+ * @since   18.0.0
+ * @version 1
  */
-const getMetricLogLevel = <T extends LogLevel>(templateLogLevel: T): LogLevel => ({
-  code: templateLogLevel.code,
+const buildMetricsCustomLogLevel = <T extends LogLevel>(template: T): LogLevel => ({
+  code: template.code,
   severity: 'METRIC',
   short: 'MET',
-  colors: templateLogLevel.colors,
+  colors: template.colors,
 }) as const;
 
+/**
+ * @public The Logger interface, defining the shape of the logger
+ *         object used for logging messages at various levels.
+ * @since   18.0.0
+ * @version 1
+ */
 export type Logger = {
-  debug:    (message: string | Error)     => void;
-  info:     (message: string)             => void;
-  notice:   (message: string)             => void;
-  warning:  (message: string | Error)     => void;
-  error:    (message: string | Error)     => void;
-  critical: (message: string | Error)     => void;
-  alert:    (message: string | Error)     => void;
   emerg:    (message: string | Error)     => void;
+  alert:    (message: string | Error)     => void;
+  critical: (message: string | Error)     => void;
+  error:    (message: string | Error)     => void;
+  warning:  (message: string | Error)     => void;
+  notice:   (message: string)             => void;
+  info:     (message: string)             => void;
+  debug:    (message: string | Error)     => void;
   metric:   (name: string, value: number) => void;
 };
 
 /**
- * @private
+ * @private The shape of the options object passed to the
+ *          {@link createLogger} function.
+ * @since   18.0.0
+ * @version 1
  */
 type CreateLoggerOptions = {
-  level?: LogLevelKey;
+  level?: keyof typeof PG_LOG_LEVELS_RFC5424;
   silent?: boolean;
+  formatter?: Formatter;
 };
 
-export const createLogger = (options: CreateLoggerOptions) => {
+/**
+ * @public  Factory function that creates a logger instance with
+ *          methods for each log level.
+ * @since   18.0.0
+ * @version 1
+ */
+export const createLogger = (options: CreateLoggerOptions = {}) => {
   const {
     level = 'info',
     silent = false,
+    formatter: format = prettyprint,
   } = options;
 
   const targetLogLevel = silent
     ? PG_LOG_LEVELS_RFC5424.error
     : PG_LOG_LEVELS_RFC5424[level];
 
-  const format = prettyprint;
   const logger: any = {};
 
   for (const method of _.keys(PG_LOG_LEVELS_RFC5424)) {
@@ -147,12 +186,7 @@ export const createLogger = (options: CreateLoggerOptions) => {
 
   logger.metric = silent
     ? (_name: string, _value: number) => void 0
-    : getMetricFn({ format, logLevel: getMetricLogLevel(PG_LOG_LEVELS_RFC5424.debug) });
+    : getMetricFn({ format, logLevel: buildMetricsCustomLogLevel(PG_LOG_LEVELS_RFC5424.debug) });
 
   return logger as Logger;
 };
-
-export const createQxLogger = (logger: Logger): ILogger => ({
-  debug: (sql, params) => logger.debug(`${sql} ${JSON.stringify(params)}`),
-  error: (sql, params, error) => logger.error(`${sql} ${JSON.stringify(params)}\n\n${error?.name} ${error?.message}\n${error?.stack}`.trim()),
-});

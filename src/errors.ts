@@ -4,11 +4,17 @@
  * @version 1
  */
 export class RuntimeError extends Error {
+  /**
+   * @param {string} message The error message.
+   * @param {Error}  cause   The original error that caused this
+   *                         error, if any.
+   * @param {string} stack   The original stack trace, if any.
+   */
   constructor(message: string, cause?: Error | undefined, stack?: string | undefined) {
     super(message);
 
     this.name = this.constructor.name;
-    this.cause = cause;
+    if (cause) this.cause = cause;
     if (stack) this.stack = stack;
   }
 }
@@ -20,7 +26,10 @@ export class RuntimeError extends Error {
  * @version 1
  */
 export class ReadOnlyError extends RuntimeError {
+  /**
+   * @param {string} action The name of the action that was prevented.
+   */
   constructor(action: string) {
-    super(`Cannot ${action} when pg is in read-only mode!`);
+    super(`Cannot ${action} while pg is in read-only mode!`);
   }
 }

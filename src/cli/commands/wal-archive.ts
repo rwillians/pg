@@ -1,8 +1,7 @@
-import { $ } from 'bun';
-
 import { withContext, defineCommand, defineOptions } from '../command';
 import { into, tables } from '../../db';
-import { s } from '../../utils';
+import { ascii } from '../../utils';
+import { $ } from 'bun';
 
 const options = defineOptions({
   path: {
@@ -34,7 +33,7 @@ export const walArchive = defineCommand(withContext({
     const star = fs.s3.archives.file(`${filename}.tar.gz`);
 
     if (!await fs.exists(segment)) {
-      log.error(`WAL segment file not found: ${s.red(segment.path)}`);
+      log.error(`WAL segment file not found: ${ascii.red(segment.path)}`);
       process.exit(1);
     }
 
@@ -42,7 +41,7 @@ export const walArchive = defineCommand(withContext({
     await $`tar -zcf ${ltar.path} ${path}`.text();
     const size = await fs.size(ltar);
 
-    log.debug(`Uploading WAL segument ${s.blue(filename)} to S3`);
+    log.debug(`Uploading WAL segument ${ascii.blue(filename)} to S3`);
     await fs.cp(ltar, star);
 
     log.debug('Updating internal state');
@@ -53,6 +52,6 @@ export const walArchive = defineCommand(withContext({
     log.debug('Deleting temporary files');
     await fs.rm(ltar);
 
-    log.info(`WAL segment ${s.blue(filename)} archived to S3`)
+    log.info(`WAL segment ${ascii.blue(filename)} archived to S3`)
   },
 }));

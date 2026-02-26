@@ -1,12 +1,11 @@
 import { create } from '@rwillians/qx/experimental-migrations';
 import * as sqlite from '@rwillians/qx/bun-sqlite';
-import { join } from 'node:path';
-
-import { type Logger, createQxLogger } from './logger';
+import { archives } from './db/tables/archives';
+import { backups } from './db/tables/backups';
+import { createQxLogger } from './db/logger';
+import { type Logger } from './logger';
 import { type Config } from './config';
-
-import { archives } from './db/archives';
-import { backups } from './db/backups';
+import { join } from 'node:path';
 
 /**
  * @public  Connects to the database, returning a Database instance.

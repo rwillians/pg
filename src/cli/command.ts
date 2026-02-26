@@ -11,7 +11,7 @@ export const defineCommand = <
   signature: string;
   description?: string | undefined;
   build?: CommandModule<T, S>['builder'] | undefined;
-  handle: (argv: ArgumentsCamelCase<S>) => Promise<void>;
+  handle: (argv: ArgumentsCamelCase<S>) => Promise<any>;
 }) => (): CommandModule<T, S> => ({
   command: input.signature,
   describe: input.description,
@@ -29,7 +29,7 @@ export const withContext = <
   signature: string;
   description?: string | undefined;
   build?: CommandModule<T, S>['builder'] | undefined;
-  handle: (argv: ArgumentsCamelCase<S>, ctx: Context) => Promise<void>;
+  handle: (argv: ArgumentsCamelCase<S>, ctx: Context) => Promise<any>;
 }) => ({
   signature: input.signature,
   description: input.description,
