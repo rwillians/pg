@@ -7,6 +7,7 @@ import { debugDump } from './cli/commands/debug-dump';
 import { genSecret } from './cli/commands/gen-secret';
 import { genSlug } from './cli/commands/gen-slug';
 import { postgresStart } from './cli/commands/postgres-start';
+import { backupNew } from './cli/commands/backup-new';
 import { walArchive } from './cli/commands/wal-archive';
 import { walUnarchive } from './cli/commands/wal-unarchive';
 
@@ -29,6 +30,10 @@ pg.command('gen', 'Generators (has subcommands)', cli => cli
 
 pg.command('postgres', 'Manage the PostgreSQL server (has subcommands)', cli => cli
   .command(postgresStart())
+);
+
+pg.command('backup', 'Execute backup operations (has subcommands)', cli => cli
+  .command(backupNew())
 );
 
 pg.command('wal', 'Execute operations on WAL segments (has subcommands)', cli => cli
