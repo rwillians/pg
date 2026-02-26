@@ -109,11 +109,12 @@ export type AnyFile = LocalFile | S3File;
  * @version 1
  */
 export const createFs = (config: Config, s3: S3Client) => {
-  const PG_STATE_DIR = config.PG_STATE_DIR;
   const S3_ARCHIVES_PREFIX = prefix(config.S3_ARCHIVES_PREFIX, { slug: config.PG_CLUSTER_SLUG});
   const S3_BACKUPS_PREFIX = prefix(config.S3_BACKUPS_PREFIX, { slug: config.PG_CLUSTER_SLUG});
-  const PG_TEMP_DIR = config.PG_TEMP_DIR;
   const PG_READONLY_MODE = config.PG_READONLY_MODE;
+  const PG_STATE_DIR = config.PG_STATE_DIR;
+  const PG_TEMP_DIR = config.PG_TEMP_DIR;
+  const PGDATA = config.PGDATA;
 
   /**
    * @public  Functions for working with the filesystem, both local
@@ -138,9 +139,18 @@ export const createFs = (config: Config, s3: S3Client) => {
          */
         file: (path: string) => new LocalFile(path, PG_STATE_DIR),
       },
-      tmp: {
+      data: {
         /**
-         * @public  Instantiates a file under the local temporary
+         * @public  Instantiates a file from under the local Postgre's
+         *          data directory.
+         * @since   18.0.0
+         * @version 1
+         */
+        file: (path: string) => new LocalFile(path, PGDATA)
+      },
+      temp: {
+        /**
+         * @public  Instantiates a file from under the local temporary
          *          directory.
          * @since   18.0.0
          * @version 1
@@ -176,6 +186,16 @@ export const createFs = (config: Config, s3: S3Client) => {
      */
     bytes: async (file: AnyFile) => file.$native.bytes(),
     /**
+     * @public  Copies the contents of a source file into a
+     *          destination file, doesn't matter if either or both are
+     *          local or in S3.
+     * @since   18.0.0
+     * @version 1
+     */
+    cp: async (source: AnyFile, destination: AnyFile) => PG_READONLY_MODE && destination instanceof S3File
+      ? p.reject(new ReadOnlyError('write file to s3'))
+      : write(destination.$native, source.$native),
+    /**
      * @public  Gets the directory name of a given path or file,
      *          whether local or in S3.
      * @since   18.0.0
@@ -183,19 +203,19 @@ export const createFs = (config: Config, s3: S3Client) => {
      */
     dirname: (file: string | AnyFile) => dirname(typeof file === 'string' ? file : file.path),
     /**
-     * @public  Deletes a file, whether local or in S3.
-     * @since   18.0.0
-     * @version 1
-     */
-    delete: async (file: AnyFile) => PG_READONLY_MODE && file instanceof S3File
-      ? p.reject(new ReadOnlyError('delete file in s3'))
-      : file.$native.unlink(),
-    /**
      * @public  Checks if a file exists, whether local or in S3.
      * @since   18.0.0
      * @version 1
      */
     exists: async (file: AnyFile) => file.$native.exists(),
+    /**
+     * @public  Deletes a file, whether local or in S3.
+     * @since   18.0.0
+     * @version 1
+     */
+    rm: async (file: AnyFile) => PG_READONLY_MODE && file instanceof S3File
+      ? p.reject(new ReadOnlyError('delete file from s3'))
+      : file.$native.unlink(),
     /**
      * @public  Calculate the SHA-256 hash of a local file.
      *
@@ -215,16 +235,6 @@ export const createFs = (config: Config, s3: S3Client) => {
      * @version 1
      */
     size: async (file: AnyFile) => file.$native.stat().then(stat => stat.size),
-    /**
-     * @public  Writes the contents of a source file into a
-     *          destination file, doesn't matter if either or both are
-     *          local or in S3.
-     * @since   18.0.0
-     * @version 1
-     */
-    write: async (source: AnyFile, destination: AnyFile) => PG_READONLY_MODE && destination instanceof S3File
-      ? p.reject(new ReadOnlyError('write file to s3'))
-      : write(destination.$native, source.$native),
   };
 
   return fs;
