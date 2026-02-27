@@ -1,316 +1,213 @@
-import type { BunFile as BunLocalFile, S3Client, S3File as BunS3File } from 'bun';
-import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
-import { CryptoHasher, write } from 'bun';
-import { ReadOnlyError } from './errors';
-import { type Config } from './config';
-import { _, p, raise } from './utils';
+import { type BunFile, type S3File, $, S3Client } from 'bun';
+import { dirname, join, resolve } from 'node:path';
+import type { Config } from './config';
+import { cry } from './utils';
 
 /**
- * @private Resolves the absolute path of a namespace path in S3,
- *          prefixing it for cluster isolation when a slug is
- *          provided.
- * @since   18.0.0
- * @version 1
- */
-const namespace = (namespace: string, { slug }: { slug?: string } = {}) =>
-    isAbsolute(namespace) === false ? raise(new Error('namespace must be an absolute path'))
-  : slug                            ? join(`/clusters/${slug}`, namespace)
-  : namespace;
-
-/**
- * @private Calculates the SHA-256 hash of the given data.
- * @since   18.0.0
- * @version 1
- */
-const sha256 = async (data: Uint8Array<ArrayBuffer>) => new CryptoHasher('sha256')
-  .update(data)
-  .digest('hex');
-
-/**
- * @private  Wraps BunFile to limite the exposed surface area, what
- *           helps enforcing read-only access.
- * @since    18.0.0
- * @version  1
+ * @public Represents a file in the local file system.
+ * @since  18.0.0
  */
 class LocalFile {
-  /**
-   * @ignore
-   * @private  Bun's native local file instance, hidden away to make
-   *           it easier to enforce read-only access.
-   */
-  public readonly '~native': BunLocalFile;
+  public readonly '~native': BunFile
 
   /**
-   * @public  The name of the file, derived from its path.
-   * @since   18.0.0
-   * @version 1
-   */
-  public readonly name: string;
-
-  /**
-   * @public  The absolute path to the file in the local filesystem.
-   * @since   18.0.0
-   * @version 1
+   * @public The absolute path to the file.
+   * @since  18.0.0
    */
   public readonly path: string;
 
   /**
-   * @public  The absolute path to the file in the local filesystem
-   *          as a URL.
-   * @since   18.0.0
-   * @version 1
+   * @public The file URL (e.g. `file:///path/to/file`).
+   * @since  18.0.0
    */
   public readonly url: string;
 
-  /**
-   * @param {string} path The absolute path to the file in the local
-   *                      filesystem.
-   */
   constructor(path: string) {
     this['~native'] = Bun.file(path);
-    this.name = basename(path);
     this.path = path;
-    this.url = `file:/${path}`;
+    this.url = `file://${path}`;
   }
 }
 
 /**
- * @private  Wraps Bun.S3File to limite the exposed surface area, what
- *           helps enforcing read-only access.
- * @since    18.0.0
- * @version  1
+ * @public Represents a file in an S3 bucket.
+ * @since  18.0.0
  */
-class S3File {
-  /**
-   * @ignore
-   * @private  Bun's native S3 file instance, hidden away to make it
-   *           easier to enforce read-only access.
-   */
-  public readonly '~native': BunS3File;
+class RemoteFile {
+  public readonly '~native': S3File;
 
   /**
-   * @public  The name of the S3 bucket where the file is located.
-   * @since   18.0.0
-   * @version 1
-   */
-  public readonly bucket: string;
-
-  /**
-   * @public  The name of the file, derived from its path.
-   * @since   18.0.0
-   * @version 1
-   */
-  public readonly name: string;
-
-  /**
-   * @public  The absolute path to the file in the local filesystem.
-   * @since   18.0.0
-   * @version 1
+   * @public The absolute path to the file inside the S3 bucket. It
+   *         includes the cluster slug prefix if a slug was give.
+   * @since  18.0.0
    */
   public readonly path: string;
 
   /**
-   * @public  The absolute path to the file in S3 as a URL.
-   * @since   18.0.0
-   * @version 1
+   * @public The file URL (e.g. `s3://bucket-name/path/to/file`).
+   * @since  18.0.0
    */
   public readonly url: string;
 
-  /**
-   * @param {S3Client} s3   Bun's S3 client instance.
-   * @param {string}   path The absolute path to the file in S3.
-   */
   constructor(s3: S3Client, path: string) {
-    this['~native'] = s3.file(path);
-    this.bucket = this['~native'].bucket!;
-    this.name = basename(path);
+    const native = s3.file(path);
+
+    this['~native'] = native;
     this.path = path;
-    this.url = `s3://${this.bucket}${this.path}`;
+    this.url = `s3://${native.bucket}${path}`;
   }
 }
 
 /**
- * @public  A union type representing any file that can be worked with
- *          by the filesystem abstraction, whether local or in S3.
- * @since   18.0.0
- * @version 1
+ * @public Union type of LocalFile and RemoteFile.
+ * @since  18.0.0
  */
-export type AnyFile = LocalFile | S3File;
+export type AnyFile = LocalFile | RemoteFile;
+export type { LocalFile, RemoteFile };
 
 /**
- * @public  Creates an abstraction over the filesystem, providing
- *          functions for working with both the local filesystem and
- *          S3.
- *
- *          The file types available to user-land only exposes a
- *          subset of Bun's file API. That so we can centralize all
- *          reads and writes operations to the fs instance returned by
- *          this function, which makes it easier to enforce read-only
- *          access to files when pg is in read-only mode.
- * @since   18.0.0
- * @version 1
+ * @public Creates a file system abstraction that works the same
+ *         across local fs and a remote fs (i.e S3 bucket).
+ * @since  18.0.0
  */
-export const createFs = (config: Config, s3: S3Client) => {
-  const S3_ARCHIVES_NAMESPACE = namespace(config.S3_ARCHIVES_PREFIX, { slug: config.PG_CLUSTER_SLUG });
-  const S3_BACKUPS_NAMESPACE = namespace(config.S3_BACKUPS_PREFIX, { slug: config.PG_CLUSTER_SLUG });
-  const PG_READONLY_MODE = config.PG_READONLY_MODE;
-  const PG_STATE_DIR = config.PG_STATE_DIR;
-  const PG_TEMP_DIR = config.PG_TEMP_DIR;
-  const PG_DATA_DIR = config.PGDATA;
-  const CWD = process.cwd();
+export const createFs = async (config: Config) => {
+  const LOCAL_STATE_DIR = config.PG_STATE_DIR;
+  const LOCAL_TEMP_DIR = config.PG_TEMP_DIR;
+  const LOCAL_DATA_DIR = config.PGDATA;
+
+  const S3_ROOT_DIR = config.PG_CLUSTER_SLUG
+    ? `/clusters/${config.PG_CLUSTER_SLUG}`
+    : '/';
+
+  const S3_ARCHIVES_PREFIX = join(S3_ROOT_DIR, config.S3_ARCHIVES_PREFIX);
+  const S3_BACKUPS_PREFIX = join(S3_ROOT_DIR, config.S3_BACKUPS_PREFIX);
+  const S3_STATE_PREFIX = join(S3_ROOT_DIR, config.S3_STATE_PREFIX);
+
+  const s3 = new S3Client({
+    endpoint: config.S3_ENDPOINT,
+    region: config.S3_REGION,
+    bucket: config.S3_BUCKET,
+    accessKeyId: config.S3_ACCESS_KEY_ID,
+    secretAccessKey: config.S3_SECRET_ACCESS_KEY,
+  });
+
+  // we gotta make sure pg's temp dir exists before we can run
+  // commands that can potentially write to it.
+  await $`mkdir -p ${config.PG_TEMP_DIR}`.text();
 
   /**
-   * @public  Functions for working with the filesystem, both local
-   *          and S3.
-   * @since   18.0.0
+   * Filesystem abstraction for working with local and remote (S3)
+   * files.
    */
   const fs = {
     local: {
       /**
-       * @public  Resolves the given path related to the current
-       *          working directory..
-       * @since   18.0.0
-       * @version 1
+       * @public Creates an instance of a file in the local file
+       *         system.
+       * @since  18.0.0
        */
-      join: (path: string) => resolve(CWD, path),
-      /**
-       * @public  Instantiates a file from anywhere in the local
-       *          filesystem.
-       * @since   18.0.0
-       * @version 1
-       */
-      file: (path: string) => new LocalFile(resolve(CWD, path)),
-      state: {
-        /**
-         * @public  Joins the given path to the local state directory.
-         * @since   18.0.0
-         * @version 1
-         */
-        join: (path: string) => resolve(join(PG_STATE_DIR, path)),
-        /**
-         * @public  Instantiates a file from under the local state
-         *          directory.
-         * @since   18.0.0
-         * @version 1
-         */
-        file: (path: string) => new LocalFile(resolve(join(PG_STATE_DIR, path))),
-      },
+      file: (path: string) => new LocalFile(path),
       data: {
         /**
-         * @public  Joins the given path to the local data directory.
-         * @since   18.0.0
-         * @version 1
+         * @public Returns the absolute path after joining the given
+         *         relative path with the data directory.
+         * @since  18.0.0
          */
-        join: (path: string) => resolve(join(PG_DATA_DIR, path)),
+        join: (path: string) => resolve(join(LOCAL_DATA_DIR, path))
+      },
+      state: {
         /**
-         * @public  Instantiates a file from under the local Postgre's
-         *          data directory.
-         * @since   18.0.0
-         * @version 1
+         * @public Returns the absolute path after joining the given
+         *         relative path with the state directory.
+         * @since  18.0.0
          */
-        file: (path: string) => new LocalFile(resolve(join(PG_DATA_DIR, path)))
+        join: (path: string) => resolve(join(LOCAL_STATE_DIR, path)),
       },
       temp: {
         /**
-         * @public  Joins the given path to the local temporary
-         *          directory.
-         * @since   18.0.0
-         * @version 1
+         * @public Returns the absolute path after joining the given
+         *         relative path with the temp directory.
+         * @since  18.0.0
          */
-        join: (path: string) => resolve(join(PG_TEMP_DIR, path)),
-        /**
-         * @public  Instantiates a file from under the local temporary
-         *          directory.
-         * @since   18.0.0
-         * @version 1
-         */
-        file: (path: string) => new LocalFile(resolve(join(PG_TEMP_DIR, path))),
+        join: (path: string) => resolve(join(LOCAL_TEMP_DIR, path)),
       },
     },
     s3: {
       /**
-       * @public  Instantiates a file from anywhere in S3.
-       * @since   18.0.0
-       * @version 1
+       * @public Creates an instance of a file in S3.
+       * @since  18.0.0
        */
-      file: (path: string) => new S3File(s3, path),
+      file: (path: string) => new RemoteFile(s3, path),
       archives: {
         /**
-         * @public  Instantiates a file from under the s3 archives
-         *          directory.
-         * @since   18.0.0
-         * @version 1
+         * @public Returns the absolute path after joining the given
+         *         relative path with the archives directory.
+         * @since  18.0.0
          */
-        file: (name: string) => new S3File(s3, resolve(join(S3_ARCHIVES_NAMESPACE, name))),
+        join: (path: string) => resolve(join(S3_ARCHIVES_PREFIX, path)),
       },
       backups: {
         /**
-         * @public  Instantiates a file from under the s3 backups
-         *          directory.
-         * @since   18.0.0
-         * @version 1
+         * @public Returns the absolute path after joining the given
+         *         relative path with the backups directory.
+         * @since  18.0.0
          */
-        file: (name: string) => new S3File(s3, resolve(join(S3_BACKUPS_NAMESPACE, name))),
+        join: (path: string) => resolve(join(S3_BACKUPS_PREFIX, path)),
+      },
+      state: {
+        /**
+         * @public Returns the absolute path after joining the given
+         *         relative path with the state directory.
+         * @since  18.0.0
+         */
+        join: (path: string) => resolve(join(S3_STATE_PREFIX, path)),
       },
     },
     /**
-     * @public  Returns a promise that resolves to the contents of the
-     *          file as a {@link Uint8Array} (array of bytes).
-     * @since   18.0.0
-     * @version 1
+     * @public Resolves to the contents of the file as a
+     *         {@link Uint8Array} (array of bytes).
+     * @since  18.0.0
      */
     bytes: async (file: AnyFile) => file['~native'].bytes(),
     /**
-     * @public  Copies the contents of a source file into a
-     *          destination file, doesn't matter if either or both are
-     *          local or in S3.
-     * @since   18.0.0
-     * @version 1
+     * @public Copies the contents of a source file into a destination
+     *         file.
+     * @since  18.0.0
      */
-    cp: async (source: AnyFile, destination: AnyFile) => PG_READONLY_MODE && destination instanceof S3File
-      ? p.reject(new ReadOnlyError('write file to s3'))
-      : write(destination['~native'], source['~native']),
+    cp: async (source: AnyFile, destination: AnyFile) => Bun.write(destination['~native'], source['~native']),
     /**
-     * @public  Gets the directory name of a given path or file,
-     *          whether local or in S3.
-     * @since   18.0.0
-     * @version 1
+     * @public Gets the directory name of the given file.
+     * @since  18.0.0
      */
-    dirname: (file: string | AnyFile) => dirname(typeof file === 'string' ? file : file.path),
+    dirname: (file: AnyFile) => dirname(file.path),
     /**
-     * @public  Checks if a file exists, whether local or in S3.
+     * @public  Checks whether the file exists.
      * @since   18.0.0
-     * @version 1
      */
     exists: async (file: AnyFile) => file['~native'].exists(),
     /**
-     * @public  Deletes a file, whether local or in S3.
-     * @since   18.0.0
-     * @version 1
+     * @public Deletes the given file.
+     * @since  18.0.0
      */
-    rm: async (file: AnyFile) => PG_READONLY_MODE && file instanceof S3File
-      ? p.reject(new ReadOnlyError('delete file from s3'))
-      : file['~native'].unlink(),
+    rm: async (file: AnyFile) => file['~native'].unlink(),
     /**
-     * @public  Calculate the SHA-256 hash of a local file.
-     *
-     *          **NOTE:** limited to local files because it can be
-     *          really expensive to download a file from S3 just to
-     *          hash it.
-     * @since   18.0.0
-     * @version 1
+     * @public Computes the SHA-256 hash of the given file. Only for
+     *         local files, would be too expensive for remote files.
+     * @since  18.0.0
      */
-    sha256: async (file: LocalFile) => await fs.exists(file)
-      ? sha256(await fs.bytes(file))
-      : null,
+    sha256: async (file: LocalFile) => cry.sha256(await fs.bytes(file)),
     /**
-     * @public  Gets the size of a file in bytes, whether local or in
-     *          S3.
-     * @since   18.0.0
-     * @version 1
+     * @public Resolves to the size of the file in bytes.
+     * @since  18.0.0
      */
     size: async (file: AnyFile) => file['~native'].stat().then(stat => stat.size),
   };
 
   return fs;
 };
+
+/**
+ * @public The shape of the file system object.
+ * @since  18.0.0
+ */
+export type FileSystem = ReturnType<typeof createFs>;

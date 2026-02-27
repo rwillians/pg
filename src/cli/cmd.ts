@@ -2,7 +2,8 @@ import type { ArgumentsCamelCase, CommandModule, Options } from 'yargs';
 import { type Context, createContext } from '../context';
 
 /**
- * Defines a cli command.
+ * @public Defines a cli command.
+ * @since  18.0.0
  */
 export const defineCommand = <
   T extends Record<string, any> = {},
@@ -20,7 +21,14 @@ export const defineCommand = <
 });
 
 /**
- * Defines a cli command that depends on context.
+ * @public Defines options for a cli command.
+ * @since  18.0.0
+ */
+export const defineOptions = <T extends Record<string, Options>>(options: T) => options;
+
+/**
+ * @public Defines a cli command that depends on context.
+ * @since  18.0.0
  */
 export const withContext = <
   T extends Record<string, any> = {},
@@ -36,8 +44,3 @@ export const withContext = <
   build: input.build,
   handle: async (argv: ArgumentsCamelCase<S>) => input.handle(argv, await createContext(process.env)),
 });
-
-/**
- * Defines options for a cli command.
- */
-export const defineOptions = <T extends Record<string, Options>>(options: T) => options;

@@ -1,4 +1,4 @@
-import { defineCommand, defineOptions } from '../command';
+import { defineCommand, defineOptions } from '../cmd';
 import { gen } from '../../utils';
 
 const options = defineOptions({

@@ -1,53 +1,39 @@
-import { ConfigError, loadConfig } from './config';
 import { connect, migreate } from './db';
 import { createLogger } from './logger';
-import { $, S3Client } from 'bun';
-import { p, proc } from './utils';
+import { loadConfig } from './config';
 import { createFs } from './fs';
 
 /**
- * @public  Initializes the full context needed for most pg commands.
- * @since   18.0.0
- * @version 1
+ * @public Initializes the full context of dependencies needed by most
+ *         pg commands.
+ * @since  18.0.0
  */
 export const createContext = async (env: Bun.Env) => {
-  const config = await loadConfig(env).catch(p.rescue(ConfigError, proc.halt(1)));
+  const config = await loadConfig(env);
 
   const log = createLogger({
     level: config.PG_LOG_LEVEL,
     silent: config.PG_SILENCED_LOGS,
   });
 
-  const db = await connect(config, log);
+  const db = await connect(config);
   await migreate(db, log);
 
   if (config.PG_READONLY_MODE) {
     log.warning('Running in read-only mode, write operations will error');
   }
 
-  const s3 = new S3Client({
-    endpoint: config.S3_ENDPOINT,
-    region: config.S3_REGION,
-    bucket: config.S3_BUCKET,
-    accessKeyId: config.S3_ACCESS_KEY_ID,
-    secretAccessKey: config.S3_SECRET_ACCESS_KEY,
-  });
-
-  const fs = createFs(config, s3);
-
-  // we gotta make sure pg's temp dir exists before we can run
-  // commands that can potentially write to it.
-  await $`mkdir -p ${config.PG_TEMP_DIR}`.text();
+  const fs = createFs(config);
 
   const ac = new AbortController();
   const signal = ac.signal;
-  const halt = (reason?: Error | string | number | null | undefined) => { ac.abort(reason); }
+  const abort = ac.abort.bind(ac);
 
   process.on('SIGINT', () => ac.abort())
          .on('SIGTERM', () => ac.abort())
          .on('SIGKILL', () => ac.abort());
 
-  return { config, db, fs, halt, log, signal };
+  return { abort, config, db, fs, log, signal };
 };
 
 /**

@@ -47,11 +47,4 @@ export type NDOMException<T extends string> = DOMException & { name: T };
  * @since   18.0.0
  * @version 1
  */
-export type Predicate<T = any> = (value: unknown) => value is T;
-
-/**
- * @private Either a string or anything that quacks like a string.
- * @since   18.0.0
- * @version 1
- */
-export type StringLike = string | { toString: () => string };
+export type Predicate<T = any> = ((value: unknown) => value is T) | ((value: unknown) => boolean);

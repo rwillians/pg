@@ -1,4 +1,4 @@
-import { defineCommand } from '../command';
+import { defineCommand } from '../cmd';
 import { gen } from '../../utils';
 
 export const genSlug = defineCommand({

@@ -1,200 +1,145 @@
-import { type Paint, _, ascii } from './utils';
+import { _, ascii, is } from './utils';
+import type { StringLike } from 'bun';
 
 /**
- * @private Map of all severities, following the RFC 5424 standard.
- * @since   18.0.0
- * @version 1
- *
+ * Maps all severities (RFC 5424) to their log level.
  * @see https://www.npmjs.com/package/winston#user-content-logging-levels
  */
-const PG_LOG_LEVELS_RFC5424 = {
-  emerg:   { code: 0, severity: 'EMERGENCY', short: 'EMG', colors: { accent: ascii.red       } },
-  alert:   { code: 1, severity: 'ALERT',     short: 'ALT', colors: { accent: ascii.red       } },
-  crit:    { code: 2, severity: 'CRITICAL',  short: 'CRT', colors: { accent: ascii.red       } },
-  error:   { code: 3, severity: 'ERROR',     short: 'ERR', colors: { accent: ascii.red       } },
-  warning: { code: 4, severity: 'WARNING',   short: 'WRN', colors: { accent: ascii.brightRed } },
-  notice:  { code: 5, severity: 'NOTICE',    short: 'NOT', colors: { accent: ascii.yellow    } },
-  info:    { code: 6, severity: 'INFO',      short: 'INF', colors: { accent: ascii.green     } },
-  debug:   { code: 7, severity: 'DEBUG',     short: 'DBG', colors: { accent: ascii.blue      } },
+const LOG_LEVELS_RFC5424 = {
+  emerg:   { code: 0, name: 'EMERGENCY', abbv: 'EMG', skin: { accent: ascii.red       } },
+  alert:   { code: 1, name: 'ALERT',     abbv: 'ALT', skin: { accent: ascii.red       } },
+  crit:    { code: 2, name: 'CRITICAL',  abbv: 'CRT', skin: { accent: ascii.red       } },
+  error:   { code: 3, name: 'ERROR',     abbv: 'ERR', skin: { accent: ascii.red       } },
+  warning: { code: 4, name: 'WARNING',   abbv: 'WRN', skin: { accent: ascii.brightRed } },
+  notice:  { code: 5, name: 'NOTICE',    abbv: 'NOT', skin: { accent: ascii.yellow    } },
+  info:    { code: 6, name: 'INFO',      abbv: 'INF', skin: { accent: ascii.green     } },
+  debug:   { code: 7, name: 'DEBUG',     abbv: 'DBG', skin: { accent: ascii.blue      } },
 } as const;
 
 /**
- * @private The shape of a log level definition.
- * @since   18.0.0
- * @version 1
+ * Severities with code less than or equal to this are considered
+ * errors and should be written to stderr.
  */
-type LogLevel = typeof PG_LOG_LEVELS_RFC5424[keyof typeof PG_LOG_LEVELS_RFC5424] | {
-  code: number;
-  severity: 'METRIC',
-  short: 'MET',
-  colors: { accent: Paint };
-};
+const ERROR_SEVERITY_CODE = LOG_LEVELS_RFC5424.error.code;
 
 /**
- * @private The shape of a payload passed to formatter functions.
- * @since   18.0.0
- * @version 1
+ * @public The shape of a logger object.
+ * @since  18.0.0
  */
+export type Logger = {
+  emerg:    (message: StringLike | Error) => void;
+  alert:    (message: StringLike | Error) => void;
+  critical: (message: StringLike | Error) => void;
+  error:    (message: StringLike | Error) => void;
+  warning:  (message: StringLike | Error) => void;
+  notice:   (message: StringLike)         => void;
+  info:     (message: StringLike)         => void;
+  debug:    (message: StringLike | Error) => void;
+};
+
+type LogLevel = keyof typeof LOG_LEVELS_RFC5424;
+
+type Severity = typeof LOG_LEVELS_RFC5424[LogLevel];
+
 type Payload = {
   pid: number;
+  severity: Severity;
   message: string;
   timestamp: Date;
 };
 
-/**
- * @private The shape of a log formatter configuration object.
- * @since   18.0.0
- * @version 1
- */
-type Config = {
-  format: (config: Config, payload: Payload) => string;
-  logLevel: LogLevel;
+type Printer = (payload: Payload) => string;
+
+type WritterConfig = {
   pid: number;
+  severity: Severity;
+  streams: { stdout: NodeJS.WriteStream, stderr: NodeJS.WriteStream };
+  printer: Printer;
 };
 
-/**
- * @public  The type definition for a log formatter function.
- * @since   18.0.0
- * @version 1
- */
-export type Formatter = (config: Config, payload: Payload) => string;
+const parse = (msg: StringLike | Error | DOMException) => {
+  if (!is.error(msg) && !is.domException(msg)) return msg.toString();
 
-/**
- * @private A simple log formatter that outputs color-coded logs with
- *          timestamps.
- * @since   18.0.0
- * @version 1
- */
-export const prettyprint: Formatter = (config, payload) => {
-  const { pid, message, timestamp } = payload;
-  const [date, time] = timestamp.toISOString().split('T');
-  const ts = [date!, time!.slice(0, -1), 'UTC'].join(' ')
-
-  return ascii.dim(ts)
-    + ' '
-    + ascii.dim(`[${pid}]`)
-    + ' '
-    + config.logLevel.colors.accent(config.logLevel.short)
-    + ' '
-    + ascii.default(message)
-    + '\n';
+  return [
+    msg.name,
+    ': ',
+    msg.message,
+    '\n\n',
+    msg.stack,
+  ].join('').trim();
 };
 
-/**
- * @private Factory function that creates a log method for a given log
- *          level.
- * @since   18.0.0
- * @version 1
- */
-const getLogFn = (config: Config): ((message: string) => void) => {
-  const { format, logLevel, pid } = config;
+const createSeverityWritter = ({ pid, severity, streams, printer }: WritterConfig) => {
+  const stream = severity.code <= ERROR_SEVERITY_CODE
+    ? streams.stderr
+    : streams.stdout;
 
-  const stream = logLevel.code <= PG_LOG_LEVELS_RFC5424.error.code
-    ? process.stderr
-    : process.stdout;
-
-  const parse = (message: string | Error) => message instanceof Error
-    ? (message.stack || message.message)
-    : message;
-
-  return (message: string | Error) => stream.write(format(config, {
+  return (message: string | Error | DOMException) => stream.write(printer({
     pid,
+    severity,
     message: parse(message),
     timestamp: new Date(),
   }));
 };
 
-/**
- * @private Factory function that creates a metric log method.
- * @since   18.0.0
- * @version 1
- */
-const getMetricFn = (config: Config) => {
-  const { format, pid } = config;
-  const stream = process.stdout;
+const createPrettyPrinter = ({ colors }: { colors: boolean }): Printer => {
+  const text = ascii.maybe(ascii.default, { if: colors });
+  const dim = ascii.maybe(ascii.dim, { if: colors });
 
-  return (name: string, value: number) => stream.write(format(config, {
-    pid,
-    message: `${name}=${value}`,
-    timestamp: new Date(),
-  }));
+  return ({ pid, severity, message, timestamp }) => {
+    const { abbv, skin } = severity;
+    const accent = ascii.maybe(skin.accent, { if: colors });
+
+    const [date, time] = timestamp.toISOString().split('T');
+    const ts = [date!, time!.slice(0, -1), 'UTC'].join(' ');
+
+    return [
+      dim(ts),
+      ' ',
+      dim(`[${pid}]`),
+      ' ',
+      accent(abbv),
+      ' ',
+      text(message),
+      '\n',
+    ].join('');
+  };
 };
 
 /**
- * @private Helper function that builds a custom log level for
- *          metrics, based on an existing log level's code and colors.
+ * @public  Creates a logger instance with the given options.
  * @since   18.0.0
  * @version 1
  */
-const buildMetricsCustomLogLevel = <T extends LogLevel>(template: T): LogLevel => ({
-  code: template.code,
-  severity: 'METRIC',
-  short: 'MET',
-  colors: template.colors,
-}) as const;
-
-/**
- * @public The Logger interface, defining the shape of the logger
- *         object used for logging messages at various levels.
- * @since   18.0.0
- * @version 1
- */
-export type Logger = {
-  emerg:    (message: string | Error)     => void;
-  alert:    (message: string | Error)     => void;
-  critical: (message: string | Error)     => void;
-  error:    (message: string | Error)     => void;
-  warning:  (message: string | Error)     => void;
-  notice:   (message: string)             => void;
-  info:     (message: string)             => void;
-  debug:    (message: string | Error)     => void;
-  metric:   (name: string, value: number) => void;
-};
-
-/**
- * @private The shape of the options object passed to the
- *          {@link createLogger} function.
- * @since   18.0.0
- * @version 1
- */
-type CreateLoggerOptions = {
-  level?: keyof typeof PG_LOG_LEVELS_RFC5424;
-  silent?: boolean;
-  formatter?: Formatter;
+export const createLogger = ({
+  pid = process.pid,
+  level = 'info',
+  silent = false,
+  colors = true,
+}: {
   pid?: number;
-};
-
-/**
- * @public  Factory function that creates a logger instance with
- *          methods for each log level.
- * @since   18.0.0
- * @version 1
- */
-export const createLogger = (options: CreateLoggerOptions = {}) => {
-  const {
-    level = 'info',
-    silent = false,
-    formatter: format = prettyprint,
-    pid = process.pid,
-  } = options;
-
+  level?: LogLevel;
+  silent?: boolean;
+  colors?: boolean;
+} = {
+  //
+}) => {
   const targetLogLevel = silent
-    ? PG_LOG_LEVELS_RFC5424.error
-    : PG_LOG_LEVELS_RFC5424[level];
+    ? LOG_LEVELS_RFC5424.error
+    : LOG_LEVELS_RFC5424[level];
+
+  const printer = createPrettyPrinter({ colors });
+  const streams = { stdout: process.stdout, stderr: process.stderr };
 
   const logger: any = {};
 
-  for (const method of _.keys(PG_LOG_LEVELS_RFC5424)) {
-    const logLevel = PG_LOG_LEVELS_RFC5424[method];
+  for (const logLevel of _.keys(LOG_LEVELS_RFC5424)) {
+    const severity = LOG_LEVELS_RFC5424[logLevel];
 
-    logger[method] = logLevel.code <= targetLogLevel.code
-      ? getLogFn({ format, logLevel, pid })
-      : (_message: string | Error) => void 0;
+    logger[logLevel] = severity.code <= targetLogLevel.code
+      ? createSeverityWritter({ pid, severity, streams, printer })
+      : () => void 0;
   }
-
-  logger.metric = silent
-    ? (_name: string, _value: number) => void 0
-    : getMetricFn({ format, logLevel: buildMetricsCustomLogLevel(PG_LOG_LEVELS_RFC5424.debug), pid });
 
   return logger as Logger;
 };

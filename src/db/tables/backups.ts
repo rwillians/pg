@@ -2,9 +2,8 @@ import { tc } from '../custom-columns';
 import { table } from '@rwillians/qx';
 
 /**
- * @public  Keeps track of all base backups uploaded to S3.
- * @since   18.0.0
- * @version 1
+ * @public Keeps track of all base backups uploaded to S3.
+ * @since  18.0.0
  */
 export const backups = table('backups', t => ({
   id: t.integer().autoincrement().primaryKey(),
