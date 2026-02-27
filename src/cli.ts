@@ -4,6 +4,7 @@ import yargs from 'yargs';
 
 import { walUnarchive } from './cli/cmds/wal-unarchive';
 import { walArchive } from './cli/cmds/wal-archive';
+import { backupNew } from './cli/cmds/backup-new';
 import { debugBusy } from './cli/cmds/debug-busy';
 import { genSecret } from './cli/cmds/gen-secret';
 import { genSlug } from './cli/cmds/gen-slug';
@@ -27,6 +28,10 @@ pg.command('gen', 'Generate suff (see subcommands)', cli => cli
 pg.command('wal', 'WAL management (see subcommands)', cli => cli
   .command(walArchive())
   .command(walUnarchive()),
+);
+
+pg.command('backup', 'Backup management (see subcommands)', cli => cli
+  .command(backupNew()),
 );
 
 pg.parseAsync();
