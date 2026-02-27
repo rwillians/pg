@@ -150,8 +150,8 @@ export const fmt = {
    * @since  18.0.0
    */
   size: (bytes: number): string => {
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    let size = bytes;
+    const units = ['KB', 'MB', 'GB', 'TB'];
+    let size = bytes / 1024;
     let unit = 0;
 
     while (size >= 1024 && unit < units.length - 1) {
@@ -159,9 +159,7 @@ export const fmt = {
       unit++;
     }
 
-    return unit === 0
-      ? `${size} ${units[unit]}`
-      : `${size.toFixed(1)} ${units[unit]}`;
+    return `${size.toFixed(2)} ${units[unit]}`;
   },
   /**
    * @public Formats a Date object into a human-readable string in

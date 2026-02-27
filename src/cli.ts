@@ -4,6 +4,7 @@ import yargs from 'yargs';
 
 import { walUnarchive } from './cli/cmds/wal-unarchive';
 import { walArchive } from './cli/cmds/wal-archive';
+import { backupStats } from './cli/cmds/backup-stats';
 import { backupNew } from './cli/cmds/backup-new';
 import { debugBusy } from './cli/cmds/debug-busy';
 import { genSecret } from './cli/cmds/gen-secret';
@@ -37,7 +38,8 @@ pg.command('wal', 'WAL management (see subcommands)', cli => cli
 
 pg.command('backup', 'Backup management (see subcommands)', cli => cli
   .command(backupNew())
-  .command(backupLs()),
+  .command(backupLs())
+  .command(backupStats()),
 );
 
 pg.command('state', 'State management (see subcommands)', cli => cli
