@@ -201,6 +201,16 @@ export const createFs = async (config: Config) => {
      * @since  18.0.0
      */
     size: async (file: AnyFile) => file['~native'].stat().then(stat => stat.size),
+    /**
+     * @public Resolves to the contents of the file as a string.
+     * @since  18.0.0
+     */
+    text: async (file: AnyFile) => file['~native'].text(),
+    /**
+     * @public Writes the given content to the file.
+     * @since  18.0.0
+     */
+    write: async (file: AnyFile, content: string) => Bun.write(file['~native'], content),
   };
 
   return fs;
