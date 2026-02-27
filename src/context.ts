@@ -23,7 +23,7 @@ export const createContext = async (env: Bun.Env) => {
     log.warning('Running in read-only mode, write operations will error');
   }
 
-  const fs = createFs(config);
+  const fs = await createFs(config);
 
   const ac = new AbortController();
   const signal = ac.signal;
