@@ -7,6 +7,7 @@ import { walArchive } from './cli/cmds/wal-archive';
 import { backupNew } from './cli/cmds/backup-new';
 import { debugBusy } from './cli/cmds/debug-busy';
 import { genSecret } from './cli/cmds/gen-secret';
+import { backupLs } from './cli/cmds/backup-ls';
 import { genSlug } from './cli/cmds/gen-slug';
 
 const pg = yargs(hideBin(process.argv))
@@ -31,7 +32,8 @@ pg.command('wal', 'WAL management (see subcommands)', cli => cli
 );
 
 pg.command('backup', 'Backup management (see subcommands)', cli => cli
-  .command(backupNew()),
+  .command(backupNew())
+  .command(backupLs()),
 );
 
 pg.parseAsync();
