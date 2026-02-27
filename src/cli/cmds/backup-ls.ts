@@ -11,12 +11,6 @@ const options = defineOptions({
   },
 });
 
-const formatDate = (date: Date): string => {
-  const [d, t] = date.toISOString().split('T');
-
-  return `${d} ${t!.slice(0, -1)} UTC`;
-};
-
 export const backupLs = defineCommand(withContext({
   signature: 'ls',
   description: 'Lists backups in descending order (most recent first)',
@@ -40,8 +34,8 @@ export const backupLs = defineCommand(withContext({
       id: String(b.id),
       type: b.parentId ? 'incremental' : 'full',
       size: fmt.size(b.size),
-      startedAt: formatDate(b.startedAt),
-      completedAt: formatDate(b.completedAt),
+      startedAt: fmt.timestamp(b.startedAt),
+      completedAt: fmt.timestamp(b.completedAt),
     }));
 
     const col = {

@@ -163,6 +163,16 @@ export const fmt = {
       ? `${size} ${units[unit]}`
       : `${size.toFixed(1)} ${units[unit]}`;
   },
+  /**
+   * @public Formats a Date object into a human-readable string in
+   *         UTC.
+   * @since  18.0.0
+   */
+  timestamp: (date: Date): string => {
+    const [d, t] = date.toISOString().split('T');
+
+    return `${d} ${t!.slice(0, -1)} UTC`;
+  },
 };
 
 //
