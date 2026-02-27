@@ -99,6 +99,73 @@ export const _ = {
 };
 
 //
+//  COMBINATORS
+//
+
+/**
+ * @public Registry of combinator functions.
+ * @since  18.0.0
+ */
+export const c = {
+  /**
+   * @public Same as {@link is.domException} but in a combinator form.
+   * @since  18.0.0
+   */
+  domException: <T extends string>(subtype: T) =>
+    (value: unknown): value is NDOMException<T> => is.domException(value, subtype),
+  /**
+   * @public Same as {@link is.instanceof} but in a combinator form.
+   * @since  18.0.0
+   */
+  instanceof: <T extends Constructor>(constructor: T) =>
+    (value: unknown): value is InstanceOf<T> => is.instanceof(value, constructor),
+  /**
+   * @public Negates the result of the given predicate function.
+   * @since  18.0.0
+   */
+  not: <T>(predicate: (arg: T) => boolean) => (arg: T) => !predicate(arg),
+  /**
+   * @public Checks if a string matches the given regular expression.
+   * @since  18.0.0
+   */
+  test: (regex: RegExp) => (str: string) => regex.test(str),
+  /**
+   * @public Same as {@link _.trimTrailing} but in a combinator form.
+   * @since  18.0.0
+   */
+  trimTrailing: (char: string) => (str: string) => _.trimTrailing(str, char),
+};
+
+//
+//  FORMATTERS
+//
+
+/**
+ * @public Registry of formatting functions.
+ * @since  18.0.0
+ */
+export const fmt = {
+  /**
+   * @public Formats a byte size into a human-readable string.
+   * @since  18.0.0
+   */
+  size: (bytes: number): string => {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let size = bytes;
+    let unit = 0;
+
+    while (size >= 1024 && unit < units.length - 1) {
+      size /= 1024;
+      unit++;
+    }
+
+    return unit === 0
+      ? `${size} ${units[unit]}`
+      : `${size.toFixed(1)} ${units[unit]}`;
+  },
+};
+
+//
 //  GENERATORS
 //
 
@@ -146,44 +213,6 @@ export const gen = {
    * @version 1
    */
   slug: () => `${_.rand(ADJECTIVES)}-${_.rand(ADJECTIVES)}-${_.rand(SUBJECTS)}`,
-}
-
-//
-//  COMBINATORS
-//
-
-/**
- * @public Registry of combinator functions.
- * @since  18.0.0
- */
-export const c = {
-  /**
-   * @public Same as {@link is.domException} but in a combinator form.
-   * @since  18.0.0
-   */
-  domException: <T extends string>(subtype: T) =>
-    (value: unknown): value is NDOMException<T> => is.domException(value, subtype),
-  /**
-   * @public Same as {@link is.instanceof} but in a combinator form.
-   * @since  18.0.0
-   */
-  instanceof: <T extends Constructor>(constructor: T) =>
-    (value: unknown): value is InstanceOf<T> => is.instanceof(value, constructor),
-  /**
-   * @public Negates the result of the given predicate function.
-   * @since  18.0.0
-   */
-  not: <T>(predicate: (arg: T) => boolean) => (arg: T) => !predicate(arg),
-  /**
-   * @public Checks if a string matches the given regular expression.
-   * @since  18.0.0
-   */
-  test: (regex: RegExp) => (str: string) => regex.test(str),
-  /**
-   * @public Same as {@link _.trimTrailing} but in a combinator form.
-   * @since  18.0.0
-   */
-  trimTrailing: (char: string) => (str: string) => _.trimTrailing(str, char),
 };
 
 //
