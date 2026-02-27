@@ -56,14 +56,14 @@ export const backupLs = defineCommand(withContext({
 
     process.stdout.write(ascii.dim(header) + '\n');
 
-    const paintType = (type: string) => type === 'full'
+    const paint = (type: string) => type.startsWith('full')
       ? ascii.green(type)
       : ascii.yellow(type);
 
     for (const row of rows) {
       const line = [
         row.id.padEnd(col.id),
-        paintType(row.type.padEnd(col.type)),
+        paint(row.type.padEnd(col.type)),
         row.size.padStart(col.size),
         ascii.dim(row.startedAt.padEnd(col.startedAt)),
         ascii.dim(row.completedAt),
