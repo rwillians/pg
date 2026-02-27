@@ -1,6 +1,6 @@
 import { defineCommand, defineOptions, withContext } from '../cmd';
 import { expr, from, tables } from '../../db';
-import { ascii } from '../../utils';
+import { ascii, fmt } from '../../utils';
 
 const options = defineOptions({
   limit: {
@@ -10,21 +10,6 @@ const options = defineOptions({
     alias: 'n',
   },
 });
-
-const formatSize = (bytes: number): string => {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let size = bytes;
-  let unit = 0;
-
-  while (size >= 1024 && unit < units.length - 1) {
-    size /= 1024;
-    unit++;
-  }
-
-  return unit === 0
-    ? `${size} ${units[unit]}`
-    : `${size.toFixed(1)} ${units[unit]}`;
-};
 
 const formatDate = (date: Date): string => {
   const [d, t] = date.toISOString().split('T');
@@ -54,7 +39,7 @@ export const backupLs = defineCommand(withContext({
     const rows = backups.map(b => ({
       id: String(b.id),
       type: b.parentId ? 'incremental' : 'full',
-      size: formatSize(b.size),
+      size: fmt.size(b.size),
       startedAt: formatDate(b.startedAt),
       completedAt: formatDate(b.completedAt),
     }));
