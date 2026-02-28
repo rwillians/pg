@@ -6,14 +6,14 @@ import type { StringLike } from 'bun';
  * @see https://www.npmjs.com/package/winston#user-content-logging-levels
  */
 const LOG_LEVELS_RFC5424 = {
-  emerg:   { code: 0, name: 'EMERGENCY', abbv: 'EMG', skin: { accent: ascii.red       } },
-  alert:   { code: 1, name: 'ALERT',     abbv: 'ALT', skin: { accent: ascii.red       } },
-  crit:    { code: 2, name: 'CRITICAL',  abbv: 'CRT', skin: { accent: ascii.red       } },
-  error:   { code: 3, name: 'ERROR',     abbv: 'ERR', skin: { accent: ascii.red       } },
-  warning: { code: 4, name: 'WARNING',   abbv: 'WRN', skin: { accent: ascii.brightRed } },
-  notice:  { code: 5, name: 'NOTICE',    abbv: 'NOT', skin: { accent: ascii.yellow    } },
-  info:    { code: 6, name: 'INFO',      abbv: 'INF', skin: { accent: ascii.green     } },
-  debug:   { code: 7, name: 'DEBUG',     abbv: 'DBG', skin: { accent: ascii.blue      } },
+  emerg:   { code: 0, name: 'EMERGENCY', abbv: 'EMG', skin: { accent: ascii.red    } },
+  alert:   { code: 1, name: 'ALERT',     abbv: 'ALT', skin: { accent: ascii.red    } },
+  crit:    { code: 2, name: 'CRITICAL',  abbv: 'CRT', skin: { accent: ascii.red    } },
+  error:   { code: 3, name: 'ERROR',     abbv: 'ERR', skin: { accent: ascii.red    } },
+  warning: { code: 4, name: 'WARNING',   abbv: 'WRN', skin: { accent: ascii.yellow } },
+  notice:  { code: 5, name: 'NOTICE',    abbv: 'NOT', skin: { accent: ascii.yellow } },
+  info:    { code: 6, name: 'INFO',      abbv: 'INF', skin: { accent: ascii.green  } },
+  debug:   { code: 7, name: 'DEBUG',     abbv: 'DBG', skin: { accent: ascii.blue   } },
 } as const;
 
 /**
