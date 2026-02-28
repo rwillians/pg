@@ -88,15 +88,42 @@ export const is = {
  */
 export const _ = {
   /**
+   * @private Same as `Object.prototype.entries` but with better
+   *          types.
+   * @since   18.0.0
+   * @version 1
+   */
+  entries: <T extends Record<string, any>>(obj: T) => Object.entries(obj) as [keyof T, T[keyof T]][],
+  /**
    * @public  Same as {@link Object.keys}, but properly typed.
    * @since   18.0.0
    */
   keys: <T extends Record<string, any>>(obj: T) => Object.keys(obj) as (keyof T)[],
   /**
+   * @private Maps over the values of an object.
+   * @since   18.0.0
+   * @version 1
+   */
+  mapValues: <T extends Record<string, any>, U>(
+    obj: T,
+    fn: (value: T[keyof T], key: keyof T) => U,
+  ): { [K in keyof T]: U } => Object.fromEntries(
+    _.entries(obj).map(([key, value]) => [key, fn(value, key as keyof T)] as const),
+  ) as { [K in keyof T]: U },
+  /**
    * @public Draws a random element from the given array of options.
    * @since  18.0.0
    */
   rand: <T>(options: T[]) => options[Math.floor(Math.random() * options.length)]!,
+  /**
+   * @public  Converts a value that quacks like a string to an actual
+   *          string.
+   * @since   18.0.0
+   * @version 1
+   */
+  toString: (value: StringLike | undefined) => value === undefined
+    ? undefined
+    : value.toString(),
   /**
    * @public Returns a function that trims the trailing occurrences of
    *         a specified character from a string.
