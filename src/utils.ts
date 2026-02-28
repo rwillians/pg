@@ -168,6 +168,22 @@ export const timer = {
    * @public Sleeps until the given AbortSignal is aborted.
    * @since  18.0.0
    */
+  /**
+   * @public Sleeps until the given date, checking the signal between
+   *         naps. Resolves early if aborted.
+   * @since  18.0.0
+   */
+  sleepUntil: async (date: Date, { nap = 500, signal }: { nap?: number, signal?: AbortSignal } = { }) => {
+    const until = date.valueOf();
+
+    while ((!signal || !signal.aborted) && Date.now() < until) {
+      await sleep(nap);
+    }
+  },
+  /**
+   * @public Sleeps until the given AbortSignal is aborted.
+   * @since  18.0.0
+   */
   sleepWhile: async (signal: AbortSignal, { nap = 500 }: { nap?: number } = { }) => {
     while (!signal.aborted) { await sleep(nap); }
   },

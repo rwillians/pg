@@ -1,5 +1,5 @@
 import type { Context } from './context';
-import { fmt, noop } from './utils';
+import { fmt, noop, timer } from './utils';
 import { Cron } from 'croner';
 import { $ } from 'bun';
 
@@ -28,9 +28,7 @@ export const run = async (ctx: Context) => {
     cron: new Cron(job.cron),
   }));
 
-  while (true) {
-    if (signal.aborted) break;
-
+  while (!signal.aborted) {
     const upcoming = entries
       .map(entry => ({ entry, next: entry.cron.nextRun()! }))
       .sort((a, b) => a.next.getTime() - b.next.getTime());
@@ -40,7 +38,8 @@ export const run = async (ctx: Context) => {
 
     if (delay > 0) {
       log.debug(`Sleeping ${fmt.interval(delay)} until next job`);
-      await Bun.sleep(delay);
+      await timer.sleepUntil(next, { signal });
+      if (signal.aborted) break;
     }
 
     await $`${{ raw: entry.cmd.join(' ') }}`.catch(noop);

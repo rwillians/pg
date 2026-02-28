@@ -18,11 +18,6 @@ export const start = defineCommand(withContext({
   handle: async (argv, ctx) => {
     const { abort, config, signal } = ctx;
 
-    const jobs = [
-      { name: 'full-backup',        cron: config.PG_CRON_FULL_BACKUP,        cmd: ['pg', 'backup', 'new'] },
-      { name: 'incremental-backup', cron: config.PG_CRON_INCREMENTAL_BACKUP, cmd: ['pg', 'backup', 'new', '-i'] },
-    ];
-
     const args = [
       'postgres',
       '-c', `max_connections=${config.POSTGRES_MAX_CONNECTIONS}`,
@@ -52,7 +47,7 @@ export const start = defineCommand(withContext({
       .on('close', abort);
 
     argv.scheduler
-      ? await scheduler.run(ctx, jobs)
+      ? await scheduler.run(ctx)
       : await timer.sleepWhile(signal);
   },
 }));
