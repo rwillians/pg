@@ -75,13 +75,9 @@ export const createFs = async (config: Config) => {
   const LOCAL_TEMP_DIR = config.PG_TEMP_DIR;
   const LOCAL_DATA_DIR = config.PGDATA;
 
-  const S3_ROOT_DIR = config.PG_CLUSTER_SLUG
-    ? `/clusters/${config.PG_CLUSTER_SLUG}`
-    : '/';
-
-  const S3_ARCHIVES_PREFIX = join(S3_ROOT_DIR, config.S3_ARCHIVES_PREFIX);
-  const S3_BACKUPS_PREFIX = join(S3_ROOT_DIR, config.S3_BACKUPS_PREFIX);
-  const S3_STATE_PREFIX = join(S3_ROOT_DIR, config.S3_STATE_PREFIX);
+  const S3_ARCHIVES_PREFIX = config.S3_ARCHIVES_PREFIX;
+  const S3_BACKUPS_PREFIX = config.S3_BACKUPS_PREFIX;
+  const S3_STATE_PREFIX = config.S3_STATE_PREFIX;
 
   const s3 = new S3Client({
     endpoint: config.S3_ENDPOINT,

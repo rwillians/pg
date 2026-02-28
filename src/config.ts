@@ -1,9 +1,15 @@
 import { major } from './pkg' with { type: 'macro' };
 import { ascii, rescue, zc } from './utils';
+import { join } from 'path';
 import { z } from 'zod/v4';
 
 const NODE_ENV = process.env.NODE_ENV || 'prod';
 const PG_MAJOR = major();
+const PG_CLUSTER_SLUG = (process.env as any).PG_CLUSTER_SLUG as string | undefined;
+
+const prefix = (prefix: string | undefined) => (value: string) => prefix
+  ? join(`/clusters/${prefix}`, value)
+  : value;
 
 const Schema = z.object({
   // // // // // // // // // // // // // // // // // // // // // // //
@@ -183,19 +189,28 @@ const Schema = z.object({
    * @optional Prefix directory where to store archived WAL segments.
    * @since    18.0.0
    */
-  S3_ARCHIVES_PREFIX: zc.absolutePath().default('/archives'),
+  S3_ARCHIVES_PREFIX: zc
+    .absolutePath()
+    .default('/archives')
+    .transform(prefix(PG_CLUSTER_SLUG)),
 
   /**
    * @optional Prefix directory where to store database backups.
    * @since    18.0.0
    */
-  S3_BACKUPS_PREFIX: zc.absolutePath().default('/backups'),
+  S3_BACKUPS_PREFIX: zc
+    .absolutePath()
+    .default('/backups')
+    .transform(prefix(PG_CLUSTER_SLUG)),
 
   /**
    * @optional Prefix directory where to store pg's state files.
    * @since    18.0.0
    */
-  S3_STATE_PREFIX: zc.absolutePath().default('/state'),
+  S3_STATE_PREFIX: zc
+    .absolutePath()
+    .default('/state')
+    .transform(prefix(PG_CLUSTER_SLUG)),
 
   // // // // // // // // // // // // // // // // // // // // // // //
   // POSTGRES IMAGE ENVIRONMENT VARIABLES                           //
