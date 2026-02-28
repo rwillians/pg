@@ -1,11 +1,27 @@
-import { defineCommand, withContext } from '../cmd';
+import { defineCommand, defineOptions, withContext } from '../cmd';
+import * as scheduler from '../../scheduler';
 import { spawn } from 'node:child_process';
+import { timer } from '../../utils';
+
+const options = defineOptions({
+  scheduler: {
+    describe: 'Run the scheduler alongside the server',
+    type: 'boolean' as const,
+    default: true,
+  },
+});
 
 export const start = defineCommand(withContext({
   signature: 'start',
   description: 'Starts the PostgreSQL server',
-  handle: async (_argv, ctx) => {
+  build: (cli) => cli.option('scheduler', options.scheduler),
+  handle: async (argv, ctx) => {
     const { abort, config, signal } = ctx;
+
+    const jobs = [
+      { name: 'full-backup',        cron: config.PG_CRON_FULL_BACKUP,        cmd: ['pg', 'backup', 'new'] },
+      { name: 'incremental-backup', cron: config.PG_CRON_INCREMENTAL_BACKUP, cmd: ['pg', 'backup', 'new', '-i'] },
+    ];
 
     const args = [
       'postgres',
@@ -34,5 +50,9 @@ export const start = defineCommand(withContext({
     spawn('docker-entrypoint.sh', args, options)
       .on('exit', abort)
       .on('close', abort);
+
+    argv.scheduler
+      ? await scheduler.run(ctx, jobs)
+      : await timer.sleepWhile(signal);
   },
 }));

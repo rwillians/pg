@@ -15,8 +15,13 @@ type Job = {
  *         context's signal is aborted.
  * @since  18.0.0
  */
-export const run = async (ctx: Context, jobs: Job[]) => {
-  const { log, signal } = ctx;
+export const run = async (ctx: Context) => {
+  const { config, log, signal } = ctx;
+
+  const jobs: Job[] = [
+    { name: 'full-backup',        cron: config.PG_CRON_FULL_BACKUP,        cmd: ['pg', 'backup', 'new'] },
+    { name: 'incremental-backup', cron: config.PG_CRON_INCREMENTAL_BACKUP, cmd: ['pg', 'backup', 'new', '-i'] },
+  ];
 
   const entries = jobs.map(job => ({
     ...job,

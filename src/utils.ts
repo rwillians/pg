@@ -1,5 +1,5 @@
 import type { AbortError, Constructor, Expand, InstanceOf, NDOMException, Predicate } from './types';
-import { type StringLike, CryptoHasher } from 'bun';
+import { type StringLike, CryptoHasher, sleep } from 'bun';
 import { randomBytes } from 'node:crypto';
 import { isAbsolute } from 'node:path';
 import { z } from 'zod/v4';
@@ -154,6 +154,24 @@ export const not = <T>(predicate: (arg: T) => boolean) => (arg: T) => !predicate
  * @since  18.0.0
  */
 export const matches = (regex: RegExp) => (str: string) => regex.test(str);
+
+//
+//  TIMER
+//
+
+/**
+ * @public Timer-related utility functions.
+ * @since  18.0.0
+ */
+export const timer = {
+  /**
+   * @public Sleeps until the given AbortSignal is aborted.
+   * @since  18.0.0
+   */
+  sleepWhile: async (signal: AbortSignal, { nap = 500 }: { nap?: number } = { }) => {
+    while (!signal.aborted) { await sleep(nap); }
+  },
+};
 
 //
 //  FORMATTERS
