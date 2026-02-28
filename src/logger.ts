@@ -58,7 +58,7 @@ type WritterConfig = {
 };
 
 const parse = (msg: StringLike | Error | DOMException) => {
-  if (!is.error(msg) && !is.domException(msg)) return msg.toString();
+  if (!is.error(msg) && !is.DOMException(msg)) return msg.toString();
 
   return [
     msg.name,

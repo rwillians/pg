@@ -1,5 +1,5 @@
 import type { Context } from './context';
-import { fmt, s } from './utils';
+import { fmt, noop } from './utils';
 import { Cron } from 'croner';
 import { $ } from 'bun';
 
@@ -38,7 +38,7 @@ export const run = async (ctx: Context, jobs: Job[]) => {
       await Bun.sleep(delay);
     }
 
-    await $`${{ raw: entry.cmd.join(' ') }}`.catch(s.noop);
+    await $`${{ raw: entry.cmd.join(' ') }}`.catch(noop);
   }
 
   log.notice('Scheduler stopped');

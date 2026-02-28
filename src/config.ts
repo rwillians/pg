@@ -1,5 +1,5 @@
 import { major } from './pkg' with { type: 'macro' };
-import { ascii, p, zc } from './utils';
+import { ascii, rescue, zc } from './utils';
 import { z } from 'zod/v4';
 
 const NODE_ENV = process.env.NODE_ENV || 'prod';
@@ -242,13 +242,13 @@ export type Config = z.infer<typeof Schema>;
 
 /**
  * @public  Parses and validates pg's configurations from environment
- *          variables. If invalid, exits 1 with a pretty error message.
+ *          variables. If invalid, prints the errors and exits 1.
  * @since   18.0.0
  */
 export const loadConfig = async (env: Bun.Env): Promise<Config> => Promise
   .resolve()
   .then(() => Schema.parseAsync(env))
-  .catch(p.rescue(z.ZodError, error => {
+  .catch(rescue(z.ZodError, error => {
     process.stderr.write(pretty(error));
     process.exit(1);
-  }))
+  }));

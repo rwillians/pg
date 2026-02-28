@@ -9,7 +9,7 @@ import { z } from 'zod/v4';
 //
 
 /**
- * @public Registry of cryptography-related utility functions.
+ * @public Cryptography-related utility functions.
  * @since  18.0.0
  */
 export const cry = {
@@ -27,15 +27,25 @@ export const cry = {
 //
 
 /**
- * @public Registry of type-guard functions.
+ * @public Type-guard functions.
  * @since  18.0.0
  */
 export const is = {
   /**
+   * @public Returns true if value is a DOMException of the specified
+   *         subtype.
+   * @since  18.0.0
+   */
+  aSpecificDOMException: <T extends string>(subtype?: T) =>
+    (value: unknown): value is typeof subtype extends string ? NDOMException<typeof subtype> : DOMException =>
+      subtype === undefined
+        ? value instanceof DOMException
+        : value instanceof DOMException && value.name === subtype,
+  /**
    * @public Returns true if value is an AbortError.
    * @since  18.0.0
    */
-  abortError: (value: unknown): value is AbortError => is.domException(value, 'AbortError'),
+  abortError: (value: unknown): value is AbortError => is.aSpecificDOMException('AbortError')(value),
   /**
    * @public Returns true if value is a constructor.
    * @since  18.0.0
@@ -46,41 +56,34 @@ export const is = {
    * @public Returns true if value is a DOMException.
    * @since  18.0.0
    */
-  domException,
-  // ↑ hoisted
+  DOMException: (value: unknown): value is DOMException => value instanceof DOMException,
   /**
    * @public Syntax sugar 🦄 for {@link Error.isError}.
    * @since  18.0.0
    */
-  error: Error.isError.bind(Error),
+  error: (value: unknown): value is Error => Error.isError(value),
   /**
    * @public Returns true if value is an Error of the specified code.
    * @since  18.0.0
    */
-  errorCode: <T extends string>(value: unknown, code: T): value is Error & { code: T } =>
-    value instanceof Error && (value as any).code === code,
+  errorWithCode: <T extends string>(code: T) =>
+    (value: unknown): value is Error & { code: T } =>
+      value instanceof Error && (value as any).code === code,
   /**
    * @public Same as `instanceof` but more exhaustive.
    * @since  18.0.0
    */
-  instanceof: <T extends Constructor>(value: unknown, constructor: T): value is T =>
-    value instanceof constructor || value?.constructor.name === constructor.name,
+  instanceof: <T extends Constructor>(constructor: T) =>
+    (value: unknown): value is InstanceOf<T> =>
+      value instanceof constructor || value?.constructor.name === constructor.name,
 };
-
-function domException(value: unknown): value is DOMException;
-function domException<T extends string>(value: unknown, name: T): value is NDOMException<T>;
-function domException(value: unknown, name?: string) {
-  return name === undefined
-    ? value instanceof DOMException
-    : value instanceof DOMException && value.name === name;
-}
 
 //
 //  LODASH
 //
 
 /**
- * @public Registry of lodash-like utility functions.
+ * @public Lodash-like utility functions.
  * @since  18.0.0
  */
 export const _ = {
@@ -95,13 +98,17 @@ export const _ = {
    */
   rand: <T>(options: T[]) => options[Math.floor(Math.random() * options.length)]!,
   /**
-   * @public Trims the trailing occurrences of a specified character
-   *         from a string.
+   * @public Returns a function that trims the trailing occurrences of
+   *         a specified character from a string.
    * @since  18.0.0
    */
-  trimTrailing: (str: string, char: string): string => str.endsWith(char)
-    ? _.trimTrailing(str.slice(0, char.length * -1), char)
-    : str
+  trimTrailing: (char: string) => (str: string): string => {
+    const fn = (str: string): string => str.endsWith(char)
+      ? fn(str.slice(0, char.length * -1))
+      : str;
+
+    return fn(str);
+  },
 };
 
 //
@@ -109,50 +116,24 @@ export const _ = {
 //
 
 /**
- * @public Registry of combinator functions.
+ * @public Negates the result of the given predicate function.
  * @since  18.0.0
  */
-export const c = {
-  /**
-   * @public Same as {@link is.domException} but in a combinator form.
-   * @since  18.0.0
-   */
-  domException: <T extends string>(subtype: T) =>
-    (value: unknown): value is NDOMException<T> => is.domException(value, subtype),
-  /**
-   * @public Same as {@link is.errorCode} but in a combinator form.
-   * @since  18.0.0
-   */
-  errorCode: (code: string) => (value: unknown) => is.errorCode(value, code),
-  /**
-   * @public Same as {@link is.instanceof} but in a combinator form.
-   * @since  18.0.0
-   */
-  instanceof: <T extends Constructor>(constructor: T) =>
-    (value: unknown): value is InstanceOf<T> => is.instanceof(value, constructor),
-  /**
-   * @public Negates the result of the given predicate function.
-   * @since  18.0.0
-   */
-  not: <T>(predicate: (arg: T) => boolean) => (arg: T) => !predicate(arg),
-  /**
-   * @public Checks if a string matches the given regular expression.
-   * @since  18.0.0
-   */
-  test: (regex: RegExp) => (str: string) => regex.test(str),
-  /**
-   * @public Same as {@link _.trimTrailing} but in a combinator form.
-   * @since  18.0.0
-   */
-  trimTrailing: (char: string) => (str: string) => _.trimTrailing(str, char),
-};
+export const not = <T>(predicate: (arg: T) => boolean) => (arg: T) => !predicate(arg);
+
+/**
+ * @public Returns a function that tests a string against the given
+ *         regular expression.
+ * @since  18.0.0
+ */
+export const matches = (regex: RegExp) => (str: string) => regex.test(str);
 
 //
 //  FORMATTERS
 //
 
 /**
- * @public Registry of formatting functions.
+ * @public Formatting functions.
  * @since  18.0.0
  */
 export const fmt = {
@@ -206,101 +187,37 @@ export const fmt = {
 //
 
 /**
- * @public Registry of sugar 🦄 functions.
+ * @public Does nothing, like what a good sugar 🦄 code should do.
  * @since  18.0.0
  */
-export const s = {
-  /**
-   * @public Does nothing, like what a good sugar 🦄 code should do.
-   * @since  18.0.0
-   */
-  noop: () => {},
-}
-
-//
-//  GENERATORS
-//
-
-const ADJECTIVES = [
-  'red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink',
-  'brown', 'black', 'white', 'gray', 'cyan', 'magenta', 'lime',
-  'teal', 'indigo', 'violet', 'gold', 'silver', 'bronze', 'quick',
-  'lazy', 'happy', 'sad', 'bright', 'dark', 'loud', 'silent', 'fast',
-  'slow', 'strong', 'weak', 'brave', 'cowardly', 'clever', 'foolish',
-  'kind', 'cruel', 'friendly', 'hostile', 'funny', 'serious',
-  'generous', 'stingy', 'honest', 'deceitful', 'loyal', 'treacherous',
-  'calm', 'anxious', 'confident', 'shy', 'ambitious',
-];
-
-const SUBJECTS = [
-  'apple', 'banana', 'cherry', 'date', 'elderberry', 'fig', 'grape',
-  'honeydew', 'kiwi', 'lemon', 'mango', 'nectarine', 'orange',
-  'papaya', 'quince', 'raspberry', 'strawberry', 'tangerine',
-  'fruit', 'voavanga', 'watermelon', 'xigua', 'zucchini', 'cat',
-  'dog', 'elephant', 'tiger', 'lion', 'bear', 'wolf', 'fox', 'rabbit',
-  'deer', 'giraffe', 'zebra', 'kangaroo', 'panda', 'monkey',
-  'dolphin', 'shark', 'whale', 'eagle', 'owl', 'sparrow', 'parrot',
-  'penguin', 'hamster', 'pig', 'cow', 'horse', 'sheep', 'goat',
-  'chicken', 'duck', 'goose', 'turkey', 'hedgehog', 'squirrel',
-  'raccoon', 'skunk', 'otter', 'beaver', 'moose', 'buffalo',
-  'antelope', 'bison', 'camel', 'llama', 'alpaca', 'donkey',
-];
-
-/**
- * @public Registry of generator functions.
- * @since  18.0.0
- */
-export const gen = {
-  /**
-   * @public  Generates a URL-safe base64 strong secret of the specified
-   *          length.
-   * @since   18.0.0
-   * @version 1
-   */
-  secret: (len: number = 32) => randomBytes(~~(len * 1.5)).toString('base64url').slice(0, len),
-
-  /**
-   * @public  Generates a random slug.
-   * @since   18.0.0
-   * @version 1
-   */
-  slug: () => `${_.rand(ADJECTIVES)}-${_.rand(ADJECTIVES)}-${_.rand(SUBJECTS)}`,
-};
+export const noop = () => {};
 
 //
 //  PROMISES
 //
 
 /**
- * @public Registry of promise-related utility functions.
+ * @public Same as {@link Promise.reject} but properly typed.
  * @since  18.0.0
  */
-export const p = {
-  /**
-   * @public Same as {@link Promise.reject} but properly typed.
-   * @since  18.0.0
-   */
-  reject: (value: Error) => Promise.reject(value) as never,
-  /**
-   * @public Defines a promise chain error handler but only for a
-   *         specific error. Other errors are re-thrown.
-   * @since  18.0.0
-   */
-  rescue,
-  // ↑ hoisted
-};
+export const reject = (value: Error) => Promise.reject(value) as never;
 
-function rescue<T extends Constructor<Error>, S>(predicate: T, handler: (error: InstanceOf<T>) => S): (error: Error) => S;
-function rescue<T extends string, S>(predicate: T, handler: (error: NDOMException<T>) => S): (error: Error) => S;
-function rescue<T, S>(predicate: Predicate<T>, handler: (error: T) => S): (error: Error) => S;
-function rescue<T, S>(predicate: Constructor<Error> | Predicate<T> | string, handler: (error: any) => S) {
-  if (typeof predicate === 'string') return rescue(c.domException(predicate), handler);
-  if (is.ctr(predicate)) return rescue(c.instanceof(predicate), handler);
+/**
+ * @public Defines an error handler that only handles errors that
+ *         satisfy the given predicate, otherwise re-throws them.
+ * @since  18.0.0
+ */
+export function rescue<T extends Constructor<Error>, S>(predicate: T, handler: (error: InstanceOf<T>) => S): (error: Error) => S;
+export function rescue<T extends string, S>(predicate: T, handler: (error: NDOMException<T>) => S): (error: Error) => S;
+export function rescue<T, S>(predicate: Predicate<T>, handler: (error: T) => S): (error: Error) => S;
+export function rescue<T, S>(predicate: Constructor<Error> | Predicate<T> | string, handler: (error: any) => S) {
+  if (typeof predicate === 'string') return rescue(is.aSpecificDOMException(predicate), handler);
+  if (is.ctr(predicate)) return rescue(is.instanceof(predicate), handler);
 
   return (error: Error) => predicate(error)
     ? handler(error)
-    : p.reject(error);
-}
+    : reject(error);
+};
 
 //
 // TERMINAL
@@ -328,7 +245,7 @@ const maybePaint = (paint: Paint, { if: applicable }: { if: boolean }) => applic
   : (str: StringLike) => str.toString();
 
 /**
- * @public Registry of ASCII style functions.
+ * @public ASCII style functions.
  * @since  18.0.0
  */
 export const ascii: Expand<{
@@ -355,7 +272,7 @@ const URL_BASE64 = /^[A-Za-z0-9_-]+$/;
 const USERNAME = /^[A-Za-z][A-Za-z0-9_]+$/;
 
 /**
- * @public Registry of custom Zod types.
+ * @public Custom Zod types.
  * @since  18.0.0
  */
 export const zc = {
@@ -367,7 +284,7 @@ export const zc = {
     .nes()
     .refine(isAbsolute, { error: 'must be an absolute path' })
     .refine(str => str !== '/', { error: 'cannot be root' })
-    .transform(c.trimTrailing('/')),
+    .transform(_.trimTrailing('/')),
   /**
    * @public Only accepts strings that are safe to use as an S3 bucket
    *         name.
@@ -397,8 +314,8 @@ export const zc = {
     .nes()
     // progressive errors to pin-point the issue
     .regex(/^\d+/, { error: 'must start with a number' })
-    .refine(c.not(c.test(/\s+/)), { error: 'cannot contain whitespaces' })
-    .refine(c.not(c.test(/[,\.]/)), { error: 'cannot contain fractions of a unit' })
+    .refine(not(matches(/\s+/)), { error: 'cannot contain whitespaces' })
+    .refine(not(matches(/[,\.]/)), { error: 'cannot contain fractions of a unit' })
     .regex(/(K|M|G|T)?B$/, { error: 'must be in a valid memory unit (B, KB, MB, GB or TB)' })
     .regex(MEMSIZE, { error: `must be a valid memory size (e.g. 56KB, 128MB, 256GB, 1TB)` }),
   /**
@@ -437,4 +354,53 @@ export const zc = {
     .min(16)
     .max(48)
     .regex(USERNAME, { error: `must start with a letter followed by letters, numbers or underscores (${USERNAME})` }),
+};
+
+//
+//  GENERATORS
+//
+
+const ADJECTIVES = [
+  'red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink',
+  'brown', 'black', 'white', 'gray', 'cyan', 'magenta', 'lime',
+  'teal', 'indigo', 'violet', 'gold', 'silver', 'bronze', 'quick',
+  'lazy', 'happy', 'sad', 'bright', 'dark', 'loud', 'silent', 'fast',
+  'slow', 'strong', 'weak', 'brave', 'cowardly', 'clever', 'foolish',
+  'kind', 'cruel', 'friendly', 'hostile', 'funny', 'serious',
+  'generous', 'stingy', 'honest', 'deceitful', 'loyal', 'treacherous',
+  'calm', 'anxious', 'confident', 'shy', 'ambitious',
+];
+
+const SUBJECTS = [
+  'apple', 'banana', 'cherry', 'date', 'elderberry', 'fig', 'grape',
+  'honeydew', 'kiwi', 'lemon', 'mango', 'nectarine', 'orange',
+  'papaya', 'quince', 'raspberry', 'strawberry', 'tangerine',
+  'fruit', 'voavanga', 'watermelon', 'xigua', 'zucchini', 'cat',
+  'dog', 'elephant', 'tiger', 'lion', 'bear', 'wolf', 'fox', 'rabbit',
+  'deer', 'giraffe', 'zebra', 'kangaroo', 'panda', 'monkey',
+  'dolphin', 'shark', 'whale', 'eagle', 'owl', 'sparrow', 'parrot',
+  'penguin', 'hamster', 'pig', 'cow', 'horse', 'sheep', 'goat',
+  'chicken', 'duck', 'goose', 'turkey', 'hedgehog', 'squirrel',
+  'raccoon', 'skunk', 'otter', 'beaver', 'moose', 'buffalo',
+  'antelope', 'bison', 'camel', 'llama', 'alpaca', 'donkey',
+];
+
+/**
+ * @public Functions that generate random values.
+ * @since  18.0.0
+ */
+export const gen = {
+  /**
+   * @public  Generates a URL-safe base64 strong secret of the specified
+   *          length.
+   * @since   18.0.0
+   * @version 1
+   */
+  secret: (len: number = 32) => randomBytes(~~(len * 1.5)).toString('base64url').slice(0, len),
+  /**
+   * @public  Generates a random slug.
+   * @since   18.0.0
+   * @version 1
+   */
+  slug: () => `${_.rand(ADJECTIVES)}-${_.rand(ADJECTIVES)}-${_.rand(SUBJECTS)}`,
 };
