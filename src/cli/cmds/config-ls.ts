@@ -1,19 +1,11 @@
 import { defineCommand, defineOptions, withContext } from '../cmd';
-import { ascii } from '../../utils';
+import { ascii, fmt } from '../../utils';
 
 const SECRETS: string[] = [
   'POSTGRES_PASSWORD',
   'S3_ACCESS_KEY_ID',
   'S3_SECRET_ACCESS_KEY',
 ];
-
-const redacted = (value: string): string => {
-  if (value.length < 10) return '••••••••';
-
-  const visible = value.slice(0, 3);
-
-  return `${visible}${'•'.repeat(value.length - 3)}`;
-};
 
 const options = defineOptions({
   redact: {
@@ -36,7 +28,7 @@ export const configLs = defineCommand(withContext({
       .entries(config)
       .map(([key, value]) => ({
         key,
-        value: (redact && SECRETS.includes(key)) ? redacted(`${value}`) : `${value}`,
+        value: (redact && SECRETS.includes(key)) ? fmt.redacted(`${value}`) : `${value}`,
       }))
       .sort((a, b) => a.key.localeCompare(b.key));
 

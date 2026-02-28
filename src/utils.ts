@@ -138,6 +138,18 @@ export const matches = (regex: RegExp) => (str: string) => regex.test(str);
  */
 export const fmt = {
   /**
+   * @public Redacts a secret value by replacing all but the first and
+   *         last 3 characters with dots.
+   */
+  redacted: (value: string): string => {
+    if (value.length < 10) return '••••••••';
+
+    const head = value.slice(0, 3);
+    const tail = value.slice(-3);
+
+    return `${head}${'•'.repeat(value.length - 6)}${tail}`;
+  },
+  /**
    * @public Formats a byte size into a human-readable string.
    * @since  18.0.0
    */
@@ -266,7 +278,7 @@ export const ascii: Expand<{
 
 const BUCKET_NAME = /^[A-Za-z][A-Za-z0-9_-]+$/;
 const DBNAME = /^[A-Za-z][A-Za-z0-9_]+$/;
-const MEMSIZE = /^(\d+)(K|M|G|T)?B$/;
+const MEMSIZE = /^(\d+)(K|M|G|T)B$/;
 const SLUG = /^[a-z][a-z0-9\-]+$/;
 const URL_BASE64 = /^[A-Za-z0-9_-]+$/;
 const USERNAME = /^[A-Za-z][A-Za-z0-9_]+$/;
@@ -316,7 +328,7 @@ export const zc = {
     .regex(/^\d+/, { error: 'must start with a number' })
     .refine(not(matches(/\s+/)), { error: 'cannot contain whitespaces' })
     .refine(not(matches(/[,\.]/)), { error: 'cannot contain fractions of a unit' })
-    .regex(/(K|M|G|T)?B$/, { error: 'must be in a valid memory unit (B, KB, MB, GB or TB)' })
+    .regex(/(K|M|G|T)B$/, { error: 'must be in a valid memory unit (KB, MB, GB or TB)' })
     .regex(MEMSIZE, { error: `must be a valid memory size (e.g. 56KB, 128MB, 256GB, 1TB)` }),
   /**
    * @public Only accepts non-empy strings. Strings with only
