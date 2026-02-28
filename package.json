@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@rwillians/qx": "^0.1.21",
+    "croner": "^10.0.1",
     "yargs": "^18.0.0",
     "zod": "^4.3.6"
   },

@@ -14,6 +14,7 @@ import { configLs } from './cli/cmds/config-ls';
 import { walStats } from './cli/cmds/wal-stats';
 import { backupLs } from './cli/cmds/backup-ls';
 import { genSlug } from './cli/cmds/gen-slug';
+import { scheduler } from './cli/cmds/scheduler';
 
 const pg = yargs(hideBin(process.argv))
   .scriptName('pg')
@@ -51,5 +52,7 @@ pg.command('state', 'State management (see subcommands)', cli => cli
   .command(statePush())
   .command(statePull()),
 );
+
+pg.command(scheduler());
 
 pg.parseAsync();

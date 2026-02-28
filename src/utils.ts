@@ -162,6 +162,23 @@ export const fmt = {
     return `${size.toFixed(2)} ${units[unit]}`;
   },
   /**
+   * @public Formats a duration in milliseconds into a human-readable
+   *         string (e.g. 1d2h, 23h41m13s).
+   * @since  18.0.0
+   */
+  interval: (ms: number): string => {
+    const s = Math.floor(ms / 1000) % 60;
+    const m = Math.floor(ms / 60000) % 60;
+    const h = Math.floor(ms / 3600000) % 24;
+    const d = Math.floor(ms / 86400000);
+
+    if (d > 0) return h > 0 ? `${d}d${h}h` : `${d}d`;
+    if (h > 0) return `${h}h${m}m${s}s`;
+    if (m > 0) return `${m}m${s}s`;
+
+    return `${s}s`;
+  },
+  /**
    * @public Formats a Date object into a human-readable string in
    *         UTC.
    * @since  18.0.0
@@ -172,6 +189,22 @@ export const fmt = {
     return `${d} ${t!.slice(0, -1)} UTC`;
   },
 };
+
+//
+//  SUGAR 🦄 CODE
+//
+
+/**
+ * @public Registry of sugar 🦄 functions.
+ * @since  18.0.0
+ */
+export const s = {
+  /**
+   * @public Does nothing, like what a good sugar 🦄 code should do.
+   * @since  18.0.0
+   */
+  noop: () => {},
+}
 
 //
 //  GENERATORS

@@ -77,6 +77,23 @@ const Schema = z.object({
    */
   PG_CLUSTER_SLUG: zc.slug().optional(),
 
+  /**
+   * @optional Cron expression for scheduling automatic full
+   *           backups. When set, the scheduler will run
+   *           `pg backup new` at the specified interval.
+   * @since    18.0.0
+   */
+  PG_CRON_FULL_BACKUP: z.string().default('0 3 * * 1'),
+
+  /**
+   * @optional Cron expression for scheduling automatic
+   *           incremental backups. When set, the scheduler
+   *           will run `pg backup new -i` at the specified
+   *           interval.
+   * @since    18.0.0
+   */
+  PG_CRON_INCREMENTAL_BACKUP: z.string().default('0 3 * * 2-7'),
+
   // // // // // // // // // // // // // // // // // // // // // // //
   // POSTGRES CONFIGS                                               //
   // // // // // // // // // // // // // // // // // // // // // // //
