@@ -4,6 +4,7 @@ import yargs from 'yargs';
 
 import { backupLs } from './cli/cmds/backup-ls';
 import { backupNew } from './cli/cmds/backup-new';
+import { backupRestore } from './cli/cmds/backup-restore';
 import { backupStats } from './cli/cmds/backup-stats';
 import { configLs } from './cli/cmds/config-ls';
 import { debugBusy } from './cli/cmds/debug-busy';
@@ -26,8 +27,9 @@ const pg = yargs(hideBin(process.argv))
   .strict();
 
 pg.command('backup', 'Backup management (see subcommands)', cli => cli
-  .command(backupNew())
   .command(backupLs())
+  .command(backupNew())
+  .command(backupRestore())
   .command(backupStats()),
 );
 
