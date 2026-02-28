@@ -5,7 +5,7 @@
     "": {
       "name": "@rwillians/pg",
       "dependencies": {
-        "@rwillians/qx": "^0.1.21",
+        "@rwillians/qx": "^0.2.0",
         "croner": "^10.0.1",
         "yargs": "^18.0.0",
         "zod": "^4.3.6",
@@ -20,7 +20,7 @@
     },
   },
   "packages": {
-    "@rwillians/qx": ["@rwillians/qx@0.1.21", "", { "peerDependencies": { "typescript": "^5.9.3" } }, "sha512-5iFnrKpxzf++0GLkmgwSq1ylj4o/laikYMxx4jS4iDWejl+yVK+NKlCfnk81j7SbkBf/RRdORN5WFdiR8X7Yuw=="],
+    "@rwillians/qx": ["@rwillians/qx@0.2.0", "", { "peerDependencies": { "typescript": "^5.9.3" } }, "sha512-6nItW/m+xwtfQVePFuu4aUMhxG1dNxgVMG+hATWVEBaOwcj0mT/QFVk6/w7dx7NVO0Z3rK9TUUDqUdggf1ZFHQ=="],
 
     "@types/bun": ["@types/bun@1.3.9", "", { "dependencies": { "bun-types": "1.3.9" } }, "sha512-KQ571yULOdWJiMH+RIWIOZ7B2RXQGpL1YQrBtLIV3FqDcCu6FsbFUBwhdKUlCKUpS3PJDsHlJ1QKlpxoVR+xtw=="],
 

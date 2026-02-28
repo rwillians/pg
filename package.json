@@ -14,7 +14,7 @@
     "compile": "bun build --compile --outfile=dist/pg src/cli.ts && chmod +x dist/pg"
   },
   "dependencies": {
-    "@rwillians/qx": "^0.1.21",
+    "@rwillians/qx": "^0.2.0",
     "croner": "^10.0.1",
     "yargs": "^18.0.0",
     "zod": "^4.3.6"
