@@ -1,7 +1,7 @@
 import { defineCommand, defineOptions, withContext } from '../cmd';
 import { ascii, fmt } from '../../utils';
 
-const SECRETS: string[] = [
+const SECRETS = [
   'POSTGRES_PASSWORD',
   'S3_ACCESS_KEY_ID',
   'S3_SECRET_ACCESS_KEY',
