@@ -15,6 +15,7 @@ import { scheduler } from './cli/cmds/scheduler';
 import { start } from './cli/cmds/start';
 import { statePull } from './cli/cmds/state-pull';
 import { statePush } from './cli/cmds/state-push';
+import { systemPrune } from './cli/cmds/system-prune';
 import { walArchive } from './cli/cmds/wal-archive';
 import { walPrune } from './cli/cmds/wal-prune';
 import { walStats } from './cli/cmds/wal-stats';
@@ -62,5 +63,9 @@ pg.command('state', 'State management (see subcommands)', cli => cli
 
 pg.command(scheduler());
 pg.command(start());
+
+pg.command('system', 'System maintenance (see subcommands)', cli => cli
+  .command(systemPrune()),
+);
 
 pg.parseAsync();
