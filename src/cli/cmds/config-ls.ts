@@ -32,10 +32,13 @@ export const configLs = defineCommand(withContext({
     const { config } = ctx;
     const { redact } = argv;
 
-    const rows = Object.entries(config).map(([key, value]) => ({
-      key,
-      value: (redact && SECRETS.includes(key)) ? redacted(`${value}`) : `${value}`,
-    }));
+    const rows = Object
+      .entries(config)
+      .map(([key, value]) => ({
+        key,
+        value: (redact && SECRETS.includes(key)) ? redacted(`${value}`) : `${value}`,
+      }))
+      .sort((a, b) => a.key.localeCompare(b.key));
 
     const col = {
       key: Math.max(...rows.map(r => r.key.length)),
