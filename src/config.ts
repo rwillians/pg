@@ -100,6 +100,13 @@ const Schema = z.object({
    */
   PG_CRON_INCREMENTAL_BACKUP: z.string().default('0 3 * * 2-7'),
 
+  /**
+   * @optional Retention period in days for backup pruning. Backups
+   *           older than this are eligible for deletion.
+   * @since    18.0.0
+   */
+  PG_BACKUP_RETENTION_DAYS: z.coerce.number().int().min(1).default(7),
+
   // // // // // // // // // // // // // // // // // // // // // // //
   // POSTGRES CONFIGS                                               //
   // // // // // // // // // // // // // // // // // // // // // // //

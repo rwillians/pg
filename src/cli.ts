@@ -4,6 +4,7 @@ import yargs from 'yargs';
 
 import { backupLs } from './cli/cmds/backup-ls';
 import { backupNew } from './cli/cmds/backup-new';
+import { backupPrune } from './cli/cmds/backup-prune';
 import { backupRestore } from './cli/cmds/backup-restore';
 import { backupStats } from './cli/cmds/backup-stats';
 import { configLs } from './cli/cmds/config-ls';
@@ -29,6 +30,7 @@ const pg = yargs(hideBin(process.argv))
 pg.command('backup', 'Backup management (see subcommands)', cli => cli
   .command(backupLs())
   .command(backupNew())
+  .command(backupPrune())
   .command(backupRestore())
   .command(backupStats()),
 );
@@ -48,14 +50,14 @@ pg.command('gen', 'Generate suff (see subcommands)', cli => cli
 
 pg.command('wal', 'WAL management (see subcommands)', cli => cli
   .command(walArchive())
-  .command(walUnarchive())
   .command(walPrune())
-  .command(walStats()),
+  .command(walStats())
+  .command(walUnarchive()),
 );
 
 pg.command('state', 'State management (see subcommands)', cli => cli
-  .command(statePush())
-  .command(statePull()),
+  .command(statePull())
+  .command(statePush()),
 );
 
 pg.command(scheduler());
