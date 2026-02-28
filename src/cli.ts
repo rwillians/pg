@@ -11,6 +11,7 @@ import { genSecret } from './cli/cmds/gen-secret';
 import { statePush } from './cli/cmds/state-push';
 import { statePull } from './cli/cmds/state-pull';
 import { configLs } from './cli/cmds/config-ls';
+import { walPrune } from './cli/cmds/wal-prune';
 import { walStats } from './cli/cmds/wal-stats';
 import { backupLs } from './cli/cmds/backup-ls';
 import { genSlug } from './cli/cmds/gen-slug';
@@ -39,6 +40,7 @@ pg.command('gen', 'Generate suff (see subcommands)', cli => cli
 pg.command('wal', 'WAL management (see subcommands)', cli => cli
   .command(walArchive())
   .command(walUnarchive())
+  .command(walPrune())
   .command(walStats()),
 );
 

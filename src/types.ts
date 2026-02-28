@@ -47,4 +47,4 @@ export type NDOMException<T extends string> = DOMException & { name: T };
  * @since   18.0.0
  * @version 1
  */
-export type Predicate<T = any> = ((value: unknown) => value is T) | ((value: unknown) => boolean);
+export type Predicate<T = any> = (value: unknown) => value is T;

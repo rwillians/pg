@@ -54,6 +54,12 @@ export const is = {
    */
   error: Error.isError.bind(Error),
   /**
+   * @public Returns true if value is an Error of the specified code.
+   * @since  18.0.0
+   */
+  errorCode: <T extends string>(value: unknown, code: T): value is Error & { code: T } =>
+    value instanceof Error && (value as any).code === code,
+  /**
    * @public Same as `instanceof` but more exhaustive.
    * @since  18.0.0
    */
@@ -113,6 +119,11 @@ export const c = {
    */
   domException: <T extends string>(subtype: T) =>
     (value: unknown): value is NDOMException<T> => is.domException(value, subtype),
+  /**
+   * @public Same as {@link is.errorCode} but in a combinator form.
+   * @since  18.0.0
+   */
+  errorCode: (code: string) => (value: unknown) => is.errorCode(value, code),
   /**
    * @public Same as {@link is.instanceof} but in a combinator form.
    * @since  18.0.0
