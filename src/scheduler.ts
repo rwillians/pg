@@ -28,6 +28,7 @@ export const run = async (ctx: Context) => {
     cron: new Cron(job.cron),
   }));
 
+  log.notice('Scheduler started');
   while (!signal.aborted) {
     const upcoming = entries
       .map(entry => ({ entry, next: entry.cron.nextRun()! }))

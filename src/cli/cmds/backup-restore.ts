@@ -16,7 +16,7 @@ const options = defineOptions({
 
 export const backupRestore = defineCommand(withContext({
   signature: 'restore <id>',
-  description: 'Restores a backup',
+  description: 'Restores the database from a base backup',
   build: cli => cli
     .positional('id', { type: 'number', demandOption: true })
     .option('force', options.force),
@@ -72,7 +72,7 @@ export const backupRestore = defineCommand(withContext({
 
     log.debug('Waiting for PostgreSQL to become ready');
     while (true) {
-      const result = await $`pg_isready`.nothrow().quiet();
+      const result = await $`pg_isready -U ${config.POSTGRES_USER} -d ${config.POSTGRES_DB}`.nothrow().quiet();
       if (result.exitCode === 0) break;
       await sleep(1000);
     }
@@ -108,7 +108,8 @@ async function restoreFull({ backup, ctx, pgdata, tmpdir }: RestoreArgs) {
   await fs.cp(star, ltar);
 
   log.debug('Clearing PGDATA');
-  await $`rm -rf ${pgdata}/*`;
+  await $`rm -rf ${pgdata}`;
+  await $`mkdir -p ${pgdata}`;
 
   log.debug('Extracting backup');
   await $`tar xzf ${ltar.path} -C ${pgdata}`;
@@ -169,7 +170,8 @@ async function restoreIncremental({ backup, ctx, pgdata, tmpdir }: RestoreArgs) 
   // -- Combine backups --
 
   log.debug('Clearing PGDATA');
-  await $`rm -rf ${pgdata}/*`;
+  await $`rm -rf ${pgdata}`;
+  await $`mkdir -p ${pgdata}`;
 
   log.debug('Combining backups with pg_combinebackup');
   await $`pg_combinebackup ${dirs} -o ${pgdata}`;

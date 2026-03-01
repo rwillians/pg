@@ -1,6 +1,6 @@
 import { defineCommand, withContext } from '../cmd';
-import { fmt, is, noop, rescue } from '../../utils';
 import { expr, from, tables } from '../../db';
+import { fmt } from '../../utils';
 
 export const backupPrune = defineCommand(withContext({
   signature: 'prune',
@@ -39,8 +39,9 @@ export const backupPrune = defineCommand(withContext({
     }
 
     for (const backup of stale) {
-      await fs.rm(fs.s3.file(backup.tar)).catch(rescue(is.errorWithCode('ENOENT'), noop));
-      await fs.rm(fs.s3.file(backup.manifest)).catch(rescue(is.errorWithCode('ENOENT'), noop));
+      await fs.rm(fs.s3.file(backup.tar));
+      await fs.rm(fs.s3.file(backup.manifest));
+
       await from(tables.backups.as('b'))
         .where(({ b }) => expr.eq(b.id, backup.id))
         .delete(db);

@@ -1,6 +1,6 @@
 import { defineCommand, withContext } from '../cmd';
-import { fmt, is, noop, rescue } from '../../utils';
 import { expr, from, tables } from '../../db';
+import { fmt } from '../../utils';
 
 export const walPrune = defineCommand(withContext({
   signature: 'prune',
@@ -34,7 +34,8 @@ export const walPrune = defineCommand(withContext({
     }
 
     for (const archive of stale) {
-      await fs.rm(fs.s3.file(archive.tar)).catch(rescue(is.errorWithCode('ENOENT'), noop));
+      await fs.rm(fs.s3.file(archive.tar));
+
       await from(tables.archives.as('a'))
         .where(({ a }) => expr.eq(a.id, archive.id))
         .delete(db);

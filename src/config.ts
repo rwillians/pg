@@ -7,7 +7,7 @@ const NODE_ENV = process.env.NODE_ENV || 'prod';
 const PG_MAJOR = major();
 const PG_CLUSTER_SLUG = (process.env as any).PG_CLUSTER_SLUG as string | undefined;
 
-const prefix = (prefix: string | undefined) => (value: string) => prefix
+const prefixWith = (prefix: string | undefined) => (value: string) => prefix
   ? join(`/clusters/${prefix}`, value)
   : value;
 
@@ -126,23 +126,26 @@ const Schema = z.object({
     .coerce
     .number()
     .int()
-    .min(10, { message: 'must be at least 10 connections' })
+    .min(10, { error: 'must be at least 10 connections' })
     .default(100),
 
   /**
-   * @optional Defines the maximum size to let the write-ahead log
-   *           grow to between automatic checkpoints.
-   *
-   *           Setting this to a lower value can help reduce recovery
-   *           time in the event of a crash, but setting it too low
-   *           can negatively impact performance.
+   * @optional Defines the maximum size that the write-ahead log can
+   *           grow to. Once this size is reached, PostgreSQL will
+   *           start removing old WAL segments.
    * @since    18.0.0
    */
-  POSTGRES_MAX_WAL_SIZE: zc.memsize().default('128MB'),
+  POSTGRES_MAX_WAL_SIZE: zc.memsize().default('256MB'),
 
   /**
    * @optional Specifies the amount of memory the database can use for
    *           shared buffers.
+   *
+   *           If running in docker, make sure to set `--shm-size` to
+   *           at least the value of this config.
+   *
+   *           e.g.: `docker run --shm-size=256MB rwillians/pg`
+   *
    * @since    18.0.0
    */
   POSTGRES_SHARED_BUFFERS: zc.memsize().default('256MB'),
@@ -154,7 +157,7 @@ const Schema = z.object({
    */
   POSTGRES_SHARED_PRELOAD_LIBRARIES: zc
     .nes()
-    .regex(/^[a-z][a-z0-9_]+(,[a-z][a-z0-9_]+){0,}$/, { message: 'must be a comma-separated list of shared library names, no spaces' })
+    .regex(/^[a-z][a-z0-9_]+(,[a-z][a-z0-9_]+){0,}$/, { error: 'must be a comma-separated list of shared library names, no spaces' })
     .default('pg_stat_statements'),
 
   // // // // // // // // // // // // // // // // // // // // // // //
@@ -199,7 +202,7 @@ const Schema = z.object({
   S3_ARCHIVES_PREFIX: zc
     .absolutePath()
     .default('/archives')
-    .transform(prefix(PG_CLUSTER_SLUG)),
+    .transform(prefixWith(PG_CLUSTER_SLUG)),
 
   /**
    * @optional Prefix directory where to store database backups.
@@ -208,7 +211,7 @@ const Schema = z.object({
   S3_BACKUPS_PREFIX: zc
     .absolutePath()
     .default('/backups')
-    .transform(prefix(PG_CLUSTER_SLUG)),
+    .transform(prefixWith(PG_CLUSTER_SLUG)),
 
   /**
    * @optional Prefix directory where to store pg's state files.
@@ -217,7 +220,7 @@ const Schema = z.object({
   S3_STATE_PREFIX: zc
     .absolutePath()
     .default('/state')
-    .transform(prefix(PG_CLUSTER_SLUG)),
+    .transform(prefixWith(PG_CLUSTER_SLUG)),
 
   // // // // // // // // // // // // // // // // // // // // // // //
   // POSTGRES IMAGE ENVIRONMENT VARIABLES                           //

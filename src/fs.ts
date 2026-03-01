@@ -1,7 +1,7 @@
 import { type BunFile, type S3File, $, S3Client } from 'bun';
 import { dirname, join, resolve } from 'node:path';
+import { cry, is, noop, rescue } from './utils';
 import type { Config } from './config';
-import { cry } from './utils';
 
 /**
  * @public Represents a file in the local file system.
@@ -185,7 +185,7 @@ export const createFs = async (config: Config) => {
      * @public Deletes the given file.
      * @since  18.0.0
      */
-    rm: async (file: AnyFile) => file['~native'].unlink(),
+    rm: async (file: AnyFile) => file['~native'].unlink().catch(rescue(is.errorWithCode('ENOENT'), noop)),
     /**
      * @public Computes the SHA-256 hash of the given file. Only for
      *         local files, would be too expensive for remote files.

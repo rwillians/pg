@@ -69,11 +69,13 @@ export const backupNew = defineCommand(withContext({
 
     await $`mkdir -p ${tmpdir}`;
 
+    const user = config.POSTGRES_USER;
+
     const pgbb =
-      incremental && fast ? $`pg_basebackup -D ${tmpdir} -Ft -z -P --incremental ${manifestPath} -c fast`
-    : incremental         ? $`pg_basebackup -D ${tmpdir} -Ft -z -P --incremental ${manifestPath}`
-    : fast                ? $`pg_basebackup -D ${tmpdir} -Ft -z -P -c fast`
-    : $`pg_basebackup -D ${tmpdir} -Ft -z -P`;
+      incremental && fast ? $`pg_basebackup -U ${user} -D ${tmpdir} -Ft -z -P --incremental ${manifestPath} -c fast`
+    : incremental         ? $`pg_basebackup -U ${user} -D ${tmpdir} -Ft -z -P --incremental ${manifestPath}`
+    : fast                ? $`pg_basebackup -U ${user} -D ${tmpdir} -Ft -z -P -c fast`
+    : $`pg_basebackup -U ${user} -D ${tmpdir} -Ft -z -P`;
 
     log.debug('Running pg_basebackup');
     await pgbb;

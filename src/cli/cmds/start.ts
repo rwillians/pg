@@ -2,6 +2,7 @@ import { defineCommand, defineOptions, withContext } from '../cmd';
 import * as scheduler from '../../scheduler';
 import { spawn } from 'node:child_process';
 import { timer } from '../../utils';
+import { $, sleep } from 'bun'
 
 const options = defineOptions({
   scheduler: {
@@ -16,7 +17,7 @@ export const start = defineCommand(withContext({
   description: 'Starts the PostgreSQL server',
   build: (cli) => cli.option('scheduler', options.scheduler),
   handle: async (argv, ctx) => {
-    const { abort, config, signal } = ctx;
+    const { abort, config, log, signal } = ctx;
 
     const args = [
       'postgres',
@@ -45,6 +46,14 @@ export const start = defineCommand(withContext({
     spawn('docker-entrypoint.sh', args, options)
       .on('exit', abort)
       .on('close', abort);
+
+    log.debug('Waiting for PostgreSQL to become ready');
+    while (true) {
+      const result = await $`pg_isready -U ${config.POSTGRES_USER} -d ${config.POSTGRES_DB}`.nothrow().quiet();
+      if (result.exitCode === 0) break;
+      await sleep(1000);
+    }
+    log.notice('PostgreSQL is ready to accept connections');
 
     argv.scheduler
       ? await scheduler.run(ctx)
