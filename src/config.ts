@@ -149,7 +149,7 @@ const Schema = z.object({
    *           start removing old WAL segments.
    * @since    18.0.0
    */
-  POSTGRES_MAX_WAL_SIZE: zc.memsize().default('256MB'),
+  POSTGRES_MAX_WAL_SIZE: zc.memsize().default('512MB'),
 
   /**
    * @optional Specifies the amount of memory the database can use for
