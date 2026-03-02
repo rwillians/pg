@@ -19,8 +19,9 @@ export const run = async (ctx: Context) => {
   const { config, log, signal } = ctx;
 
   const jobs: Job[] = [
-    { name: 'full-backup',        cron: config.PG_CRON_FULL_BACKUP,        cmd: ['pg', 'backup', 'new'] },
+    { name: 'backup',             cron: config.PG_CRON_BACKUP,             cmd: ['pg', 'backup', 'new'] },
     { name: 'incremental-backup', cron: config.PG_CRON_INCREMENTAL_BACKUP, cmd: ['pg', 'backup', 'new', '-i'] },
+    { name: 'system-prune',       cron: config.PG_CRON_SYSTEM_PRUNE,       cmd: ['pg', 'system', 'prune'] },
   ];
 
   const entries = jobs.map(job => ({
