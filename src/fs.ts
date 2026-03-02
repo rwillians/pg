@@ -38,7 +38,7 @@ class RemoteFile {
 
   /**
    * @public The absolute path to the file inside the S3 bucket. It
-   *         includes the cluster slug prefix if a slug was give.
+   *         includes the cluster slug prefix if a slug was given.
    * @since  18.0.0
    */
   public readonly path: string;

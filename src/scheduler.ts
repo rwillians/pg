@@ -15,7 +15,7 @@ type Job = {
  *         context's signal is aborted.
  * @since  18.0.0
  */
-export const run = async (ctx: Context) => {
+export const start = async (ctx: Context) => {
   const { config, log, signal } = ctx;
 
   const jobs: Job[] = [

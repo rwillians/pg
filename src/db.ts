@@ -36,7 +36,7 @@ export const tables = {
  * @since   18.0.0
  * @version 1
  */
-export const migreate = async (db: Database, logger: Logger) => {
+export const migrate = async (db: Database, logger: Logger) => {
   logger.debug('running database migrations...');
 
   await create.table(archives, { ifNotExists: true }).onto(db);

@@ -15,8 +15,8 @@ const options = defineOptions({
   },
 });
 
-export const configLs = defineCommand(withContext({
-  signature: 'ls',
+export const systemConfig = defineCommand(withContext({
+  signature: 'config',
   description: 'Lists all configuration values',
   build: cli => cli
     .option('redact', options.redact),
@@ -38,7 +38,6 @@ export const configLs = defineCommand(withContext({
 
     for (const row of rows) {
       const key = row.key.padEnd(col.key);
-
       process.stdout.write(`${ascii.dim(key)}  ${row.value}\n`);
     }
   },

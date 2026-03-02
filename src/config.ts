@@ -86,7 +86,7 @@ const Schema = z.object({
 
   /**
    * @optional Retention period in days for which Point-In-Time
-   *           Recovery (PITR) is available.
+   *           Recovery (PITR) should be available.
    * @since    18.0.0
    */
   PG_MAX_PITR_DAYS: z.coerce.number().int().min(1).default(7),

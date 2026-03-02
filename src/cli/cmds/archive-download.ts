@@ -4,7 +4,7 @@ import { $ } from 'bun';
 
 const options = defineOptions({
   path: {
-    describe: 'Path where the WAL segment file should be placed',
+    describe: 'Path where the file should be placed',
     type: 'string' as const,
     demandOption: true,
     alias: 'p',
@@ -17,9 +17,9 @@ const options = defineOptions({
   },
 });
 
-export const walUnarchive = defineCommand(withContext({
-  signature: 'unarchive',
-  description: 'Unarchives a WAL segment file from S3',
+export const archiveDownload = defineCommand(withContext({
+  signature: 'download',
+  description: 'Downloads an archived file from S3',
   build: cli => cli
     .option('path', options.path)
     .option('filename', options.filename),
@@ -29,22 +29,22 @@ export const walUnarchive = defineCommand(withContext({
 
     const star = fs.s3.file(fs.s3.archives.join(`${filename}.tar.gz`));
     const ltar = fs.local.file(fs.local.temp.join(`${filename}.tar.gz`));
-    const segment = fs.local.file(fs.local.data.join(path));
+    const file = fs.local.file(fs.local.data.join(path));
 
     if (!await fs.exists(star)) {
-      log.error(`WAL segment file not found: ${ascii.red(star.url)}`);
+      log.error(`File not found: ${ascii.red(star.url)}`);
       process.exit(1);
     }
 
-    log.debug(`Downloading WAL segment ${ascii.blue(filename)} from S3`);
+    log.debug(`Downloading file ${ascii.blue(filename)} from S3`);
     await fs.cp(star, ltar);
 
     log.debug('Decompressing file');
-    await $`tar -zxf ${ltar.path} -C ${fs.dirname(segment)}`.text();
+    await $`tar -zxf ${ltar.path} -C ${fs.dirname(file)}`.text();
 
     log.debug('Deleting temporary files');
     await fs.rm(ltar);
 
-    log.info(`WAL segment ${ascii.blue(filename)} unarchived from S3`);
+    log.info(`File ${ascii.blue(filename)} unarchived from S3`);
   },
 }));

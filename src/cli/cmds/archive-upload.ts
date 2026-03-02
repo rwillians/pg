@@ -6,7 +6,7 @@ import { $ } from 'bun';
 
 const options = defineOptions({
   path: {
-    describe: 'Path to the WAL segment file',
+    describe: 'Path to the file to archive',
     type: 'string' as const,
     demandOption: true,
     alias: 'p',
@@ -19,9 +19,9 @@ const options = defineOptions({
   },
 });
 
-export const walArchive = defineCommand(withContext({
+export const archiveUpload = defineCommand(withContext({
   signature: 'archive',
-  description: 'Archives a WAL segment file to S3',
+  description: 'Archives a file to S3',
   build: cli => cli
     .option('path', options.path)
     .option('filename', options.filename),
@@ -30,24 +30,24 @@ export const walArchive = defineCommand(withContext({
     const { config, db, fs, log } = ctx;
 
     if (config.PG_READONLY_MODE) {
-      log.error('Cannot archive WAL segment in read-only mode');
+      log.error('Cannot archive files while in read-only mode');
       process.exit(1);
     }
 
-    const segment = fs.local.file(fs.local.data.join(path));
+    const file = fs.local.file(fs.local.data.join(path));
     const ltar = fs.local.file(fs.local.temp.join(`${filename}.tar.gz`));
     const star = fs.s3.file(fs.s3.archives.join(`${filename}.tar.gz`));
 
-    if (!await fs.exists(segment)) {
-      log.error(`WAL segment file not found: ${ascii.red(segment.url)}`);
+    if (!await fs.exists(file)) {
+      log.error(`File not found: ${ascii.red(file.url)}`);
       process.exit(1);
     }
 
     log.debug('Compressing file');
-    await $`tar -zcf ${ltar.path} -C ${fs.dirname(segment)} ${basename(segment.path)}`.text();
+    await $`tar -zcf ${ltar.path} -C ${fs.dirname(file)} ${basename(file.path)}`.text();
     const size = await fs.size(ltar);
 
-    log.debug(`Uploading WAL segment ${ascii.blue(filename)} to S3`);
+    log.debug(`Uploading file ${ascii.blue(filename)} to S3`);
     await fs.cp(ltar, star);
 
     log.debug('Updating internal state');
@@ -58,6 +58,6 @@ export const walArchive = defineCommand(withContext({
     log.debug('Deleting temporary files');
     await fs.rm(ltar);
 
-    log.info(`WAL segment ${ascii.blue(filename)} archived to S3`);
+    log.info(`File ${ascii.blue(filename)} archived to S3`);
   },
 }));

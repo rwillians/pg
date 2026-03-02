@@ -2,14 +2,14 @@ import { defineCommand, withContext } from '../cmd';
 import { expr, from, tables } from '../../db';
 import { fmt } from '../../utils';
 
-export const walPrune = defineCommand(withContext({
+export const archivePrune = defineCommand(withContext({
   signature: 'prune',
-  description: 'Prunes stale WAL segments that precede the oldest full backup',
+  description: 'Prunes stale archives that precede the oldest full backup',
   handle: async (_argv, ctx) => {
     const { config, db, fs, log } = ctx;
 
     if (config.PG_READONLY_MODE) {
-      log.error('Cannot prune WAL segments in read-only mode');
+      log.error('Cannot prune archives while in read-only mode');
       process.exit(1);
     }
 
@@ -29,7 +29,7 @@ export const walPrune = defineCommand(withContext({
       .all(db);
 
     if (stale.length === 0) {
-      log.notice('No stale WAL segments found');
+      log.notice('No stale archives found');
       return;
     }
 
@@ -42,6 +42,6 @@ export const walPrune = defineCommand(withContext({
     }
 
     const reclamed = stale.reduce((sum, a) => sum + a.size, 0);
-    log.info(`Pruned ${stale.length} stale WAL segment(s), reclaimed ${fmt.size(reclamed)}`);
+    log.info(`Pruned ${stale.length} stale archives, reclaimed ${fmt.size(reclamed)}`);
   },
 }));

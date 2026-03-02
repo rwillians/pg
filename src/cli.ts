@@ -2,12 +2,15 @@ import { version } from './pkg' with { type: 'macro' };
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs';
 
+import { archiveDownload } from './cli/cmds/archive-download';
+import { archivePrune } from './cli/cmds/archive-prune';
+import { archiveStats } from './cli/cmds/archive-stats';
+import { archiveUpload } from './cli/cmds/archive-upload';
 import { backupLs } from './cli/cmds/backup-ls';
 import { backupNew } from './cli/cmds/backup-new';
 import { backupPrune } from './cli/cmds/backup-prune';
 import { backupRestore } from './cli/cmds/backup-restore';
 import { backupStats } from './cli/cmds/backup-stats';
-import { configLs } from './cli/cmds/config-ls';
 import { debugBusy } from './cli/cmds/debug-busy';
 import { genSecret } from './cli/cmds/gen-secret';
 import { genSlug } from './cli/cmds/gen-slug';
@@ -15,11 +18,8 @@ import { scheduler } from './cli/cmds/scheduler';
 import { start } from './cli/cmds/start';
 import { statePull } from './cli/cmds/state-pull';
 import { statePush } from './cli/cmds/state-push';
+import { systemConfig } from './cli/cmds/system-config';
 import { systemPrune } from './cli/cmds/system-prune';
-import { walArchive } from './cli/cmds/wal-archive';
-import { walPrune } from './cli/cmds/wal-prune';
-import { walStats } from './cli/cmds/wal-stats';
-import { walUnarchive } from './cli/cmds/wal-unarchive';
 
 const pg = yargs(hideBin(process.argv))
   .scriptName('pg')
@@ -28,7 +28,14 @@ const pg = yargs(hideBin(process.argv))
   .demandCommand(1)
   .strict();
 
-pg.command('backup', 'Backup management (see subcommands)', cli => cli
+pg.command('archive', 'Manage archived files (see subcommands)', cli => cli
+  .command(archiveDownload())
+  .command(archivePrune())
+  .command(archiveStats())
+  .command(archiveUpload()),
+);
+
+pg.command('backup', 'Manage base backups (see subcommands)', cli => cli
   .command(backupLs())
   .command(backupNew())
   .command(backupPrune())
@@ -36,27 +43,16 @@ pg.command('backup', 'Backup management (see subcommands)', cli => cli
   .command(backupStats()),
 );
 
-pg.command('config', 'Configuration management (see subcommands)', cli => cli
-  .command(configLs()),
-);
-
 pg.command('debug', 'Tools for debug (see subcommands)', cli => cli
   .command(debugBusy()),
 );
 
-pg.command('gen', 'Generate suff (see subcommands)', cli => cli
+pg.command('gen', 'Commands for generating random values (see subcommands)', cli => cli
   .command(genSecret())
   .command(genSlug()),
 );
 
-pg.command('wal', 'WAL management (see subcommands)', cli => cli
-  .command(walArchive())
-  .command(walPrune())
-  .command(walStats())
-  .command(walUnarchive()),
-);
-
-pg.command('state', 'State management (see subcommands)', cli => cli
+pg.command('state', 'Manage state database (see subcommands)', cli => cli
   .command(statePull())
   .command(statePush()),
 );
@@ -64,7 +60,8 @@ pg.command('state', 'State management (see subcommands)', cli => cli
 pg.command(scheduler());
 pg.command(start());
 
-pg.command('system', 'System maintenance (see subcommands)', cli => cli
+pg.command('system', 'System commands (see subcommands)', cli => cli
+  .command(systemConfig())
   .command(systemPrune()),
 );
 

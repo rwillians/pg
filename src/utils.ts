@@ -165,24 +165,58 @@ export const matches = (regex: RegExp) => (str: string) => regex.test(str);
  */
 export const timer = {
   /**
-   * @public Returns the given number of days in milliseconds.
+   * @public Convers the given amount of seconds into milliseconds.
    * @since  18.0.0
    */
-  days: (n: number) => n * 86_400_000,
+  secs: (n: number) => ~~(n * 1000),
   /**
-   * @public Sleeps until the given date, checking the signal between
-   *         naps. Resolves early if aborted.
+   * @public Convers the given amount of minutes into milliseconds.
+   * @since  18.0.0
+   */
+  minutes: (n: number) => ~~(n * 60_000),
+  /**
+   * @public Convers the given amount of hours into milliseconds.
+   * @since  18.0.0
+   */
+  hours: (n: number) => ~~(n * 3_600_000),
+  /**
+   * @public Convers the given amount of days into milliseconds.
+   * @since  18.0.0
+   */
+  days: (n: number) => ~~(n * 86_400_000),
+  /**
+   * @public Sleeps for the given amount of milliseconds or until the
+   *         given signal is aborted. The option `nap` controls how
+   *         often the signal is checked - too short is heavy on the
+   *         CPU, while too long makes the sleep less responsive.
+   * @since  18.0.0
+   */
+  sleep: async (ms: number, { nap = 500, signal }: { nap?: number, signal?: AbortSignal } = { }) => {
+    let remaining = ms;
+
+    while (!signal?.aborted && remaining > 0) {
+      await sleep(Math.min(nap, remaining));
+      remaining -= nap;
+    }
+  },
+  /**
+   * @public Sleeps until the given date. The option `nap` controls
+   *         how often the signal is checked - too short is heavy on
+   *         the CPU, while too long makes the sleep less responsive.
    * @since  18.0.0
    */
   sleepUntil: async (date: Date, { nap = 500, signal }: { nap?: number, signal?: AbortSignal } = { }) => {
     const until = date.valueOf();
 
-    while ((!signal || !signal.aborted) && Date.now() < until) {
+    while (!signal?.aborted && Date.now() < until) {
       await sleep(nap);
     }
   },
   /**
-   * @public Sleeps until the given AbortSignal is aborted.
+   * @public Sleeps until the given AbortSignal is aborted. The option
+   *         `nap` controls how often the signal is checked - too
+   *         short is heavy on the CPU, while too long makes the sleep
+   *         less responsive.
    * @since  18.0.0
    */
   sleepWhile: async (signal: AbortSignal, { nap = 500 }: { nap?: number } = { }) => {
