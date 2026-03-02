@@ -9,9 +9,11 @@ import { createFs } from './fs';
  * @since  18.0.0
  */
 export const createContext = async (env: Bun.Env) => {
+  const pid = process.pid;
   const config = await loadConfig(env);
 
-  const log = createLogger({
+  const log = await createLogger({
+    pid,
     level: config.PG_LOG_LEVEL,
     silent: config.PG_SILENCED_LOGS,
   });
@@ -33,7 +35,7 @@ export const createContext = async (env: Bun.Env) => {
          .on('SIGTERM', () => ac.abort())
          .on('SIGKILL', () => ac.abort());
 
-  return { abort, config, db, fs, log, signal };
+  return { abort, config, db, fs, log, pid, signal };
 };
 
 /**

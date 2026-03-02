@@ -111,7 +111,7 @@ const createPrettyPrinter = ({ colors }: { colors: boolean }): Printer => {
  * @since   18.0.0
  * @version 1
  */
-export const createLogger = ({
+export const createLogger = async ({
   pid = process.pid,
   level = 'info',
   silent = false,
