@@ -1,7 +1,14 @@
 import { spawn } from 'node:child_process';
+import { $, type StringLike } from 'bun';
 import type { Context } from './context';
-import { timer } from './utils';
-import { $ } from 'bun';
+import { is, timer } from './utils';
+
+const logWith = (
+  log: (message: StringLike | Error) => void,
+  options: { unless: (value: unknown) => boolean },
+) => (error: Error) => options.unless(error)
+  ? void 0
+  : log(error);
 
 /**
  * @public Resolves to `true` if and when PostgreSQL becomes ready to
@@ -37,13 +44,10 @@ export const isReady = async (
  * @public Starts the PostgreSQL server.
  * @since  18.0.0
  */
-export const start = async ({
-  abort,
-  config,
-  fs,
-  log,
-  signal,
-}: Context) => {
+export const start = async (
+  { abort, config, fs, log, signal }: Context,
+  additionalArgs: string[] = [],
+) => {
   const recoveryFlag = fs.local.file(fs.local.data.join('recovery.signal'));
   if (await fs.exists(recoveryFlag)) log.notice('PostgreSQL is starting in recovery mode');
 
@@ -61,6 +65,7 @@ export const start = async ({
     '-c', `shared_preload_libraries=${config.POSTGRES_SHARED_PRELOAD_LIBRARIES}`,
     '-c', 'autovacuum_vacuum_cost_delay=0',
     '-c', `maintenance_work_mem=${config.POSTGRES_MAINTENANCE_WORK_MEM}`,
+    ...additionalArgs,
   ];
 
   const options = {
@@ -72,6 +77,7 @@ export const start = async ({
   } as const;
 
   return spawn('docker-entrypoint.sh', args, options)
+    .on('error', logWith(log.error, { unless: is.abortError }))
     .on('exit', abort)
     .on('close', abort);
 };

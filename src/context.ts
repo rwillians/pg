@@ -38,9 +38,9 @@ export const createContext = async (env: Bun.Env) => {
     abort();
   };
 
-  process.on('SIGINT', halt)
-         .on('SIGTERM', halt)
-         .on('SIGKILL', halt);
+  process.on('SIGINT', abort)
+         .on('SIGTERM', abort)
+         .on('SIGKILL', abort);
 
   if (config.PG_READONLY_MODE) {
     log.warning('Running in read-only mode, write operations will fail');

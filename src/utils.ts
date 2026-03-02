@@ -45,7 +45,7 @@ export const is = {
    * @public Returns true if value is an AbortError.
    * @since  18.0.0
    */
-  abortError: (value: unknown): value is AbortError => is.aSpecificDOMException('AbortError')(value),
+  abortError: (value: unknown): value is AbortError => value instanceof Error && value.name === 'AbortError',
   /**
    * @public Returns true if value is a constructor.
    * @since  18.0.0

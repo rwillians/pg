@@ -1,7 +1,7 @@
 import { defineCommand, defineOptions, withContext } from '../cmd';
 import { into, tables } from '../../db';
-import { ascii } from '../../utils';
 import { basename } from 'node:path';
+import { ascii } from '../../utils';
 import { $ } from 'bun';
 
 const options = defineOptions({
@@ -20,7 +20,7 @@ const options = defineOptions({
 });
 
 export const archiveUpload = defineCommand(withContext({
-  signature: 'archive',
+  signature: 'upload',
   description: 'Archives a file to S3',
   build: cli => cli
     .option('path', options.path)
@@ -58,6 +58,6 @@ export const archiveUpload = defineCommand(withContext({
     log.debug('Deleting temporary files');
     await fs.rm(ltar);
 
-    log.info(`File ${ascii.blue(filename)} archived to S3`);
+    log.info(`File ${ascii.blue(filename)} uploaded to S3`);
   },
 }));

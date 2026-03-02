@@ -45,6 +45,6 @@ export const archiveDownload = defineCommand(withContext({
     log.debug('Deleting temporary files');
     await fs.rm(ltar);
 
-    log.info(`File ${ascii.blue(filename)} unarchived from S3`);
+    log.info(`File ${ascii.green(filename)} downloaded from S3`);
   },
 }));
