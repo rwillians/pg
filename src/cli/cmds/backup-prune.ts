@@ -1,6 +1,6 @@
 import { defineCommand, withContext } from '../cmd';
 import { expr, from, tables } from '../../db';
-import { fmt } from '../../utils';
+import { fmt, timer } from '../../utils';
 
 export const backupPrune = defineCommand(withContext({
   signature: 'prune',
@@ -13,9 +13,9 @@ export const backupPrune = defineCommand(withContext({
       process.exit(1);
     }
 
-    const cutoff = new Date(Date.now() - config.PG_BACKUP_RETENTION_DAYS * 86_400_000);
+    const cutoff = new Date(Date.now() - timer.days(config.PG_MAX_PITR_DAYS));
 
-    // Find the most recent full backup older than the retention cutoff
+    // find the most recent full backup older than the retention cutoff
     const landmark = await from(tables.backups.as('b'))
       .where(({ b }) => expr.is(b.parentId, null))
       .where(({ b }) => expr.lt(b.startedAt, cutoff))
@@ -28,7 +28,7 @@ export const backupPrune = defineCommand(withContext({
       return;
     }
 
-    // Find all backups (full and incremental) older than the landmark
+    // find all backups (full and incremental) older than the landmark
     const stale = await from(tables.backups.as('b'))
       .where(({ b }) => expr.lt(b.startedAt, landmark.startedAt))
       .all(db);

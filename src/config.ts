@@ -40,10 +40,64 @@ const Schema = z.object({
   // // // // // // // // // // // // // // // // // // // // // // //
 
   /**
+   * @optional A slug that identifies the PostgreSQL cluster. This
+   *           MUST be set when multiple clusters share the same
+   *           S3 bucket to avoid conflicts.
+   * @since    18.0.0
+   */
+  PG_CLUSTER_SLUG: zc.slug().optional(),
+
+  /**
+   * @optional Cron expression for scheduling automatic full
+   *           backups. When set, the scheduler will run
+   *           `pg backup new` at the specified interval.
+   * @since    18.0.0
+   */
+  PG_CRON_BACKUP: zc.cron().default('0 3 * * 1'),
+
+  /**
+   * @optional Cron expression for scheduling automatic
+   *           incremental backups. When set, the scheduler
+   *           will run `pg backup new -i` at the specified
+   *           interval.
+   * @since    18.0.0
+   */
+  PG_CRON_INCREMENTAL_BACKUP: zc.cron().default('0 3 * * 2-7'),
+
+  /**
+   * @optional Cron expression for scheduling automatically pushing
+   *           pg's state database to S3.
+   * @since    18.0.0
+   */
+  PG_CRON_STATE_PUSH: zc.cron().default('0 * * * *'),
+
+  /**
+   * @optional Cron expression for scheduling automatic system-wide
+   *           prune.
+   * @since    18.0.0
+   */
+  PG_CRON_SYSTEM_PRUNE: zc.cron().default('0 6 * * 1'),
+
+  /**
    * @optional Controls log verbosity.
    * @since    18.0.0
    */
   PG_LOG_LEVEL: z.enum(['debug', 'info', 'notice', 'warning', 'error']).default('info'),
+
+  /**
+   * @optional Retention period in days for which Point-In-Time
+   *           Recovery (PITR) is available.
+   * @since    18.0.0
+   */
+  PG_MAX_PITR_DAYS: z.coerce.number().int().min(1).default(7),
+
+  /**
+   * @optional Puts pg in read-only mode, no write operations to
+   *           state or S3 are allowed.
+   * @since    18.0.0
+   * @version  1
+   */
+  PG_READONLY_MODE: z.coerce.boolean().default(false),
 
   /**
    * @optional Mutes all logs except for warnings and errors.
@@ -66,46 +120,6 @@ const Schema = z.object({
    * @version  1
    */
   PG_TEMP_DIR: zc.absolutePath().default('/tmp/pg'),
-
-  /**
-   * @optional Puts pg in read-only mode, no write operations to
-   *           state or S3 are allowed.
-   * @since    18.0.0
-   * @version  1
-   */
-  PG_READONLY_MODE: z.coerce.boolean().default(false),
-
-  /**
-   * @optional A slug that identifies the PostgreSQL cluster. This
-   *           MUST be set when multiple clusters share the same
-   *           S3 bucket to avoid conflicts.
-   * @since    18.0.0
-   */
-  PG_CLUSTER_SLUG: zc.slug().optional(),
-
-  /**
-   * @optional Cron expression for scheduling automatic full
-   *           backups. When set, the scheduler will run
-   *           `pg backup new` at the specified interval.
-   * @since    18.0.0
-   */
-  PG_CRON_FULL_BACKUP: z.string().default('0 3 * * 1'),
-
-  /**
-   * @optional Cron expression for scheduling automatic
-   *           incremental backups. When set, the scheduler
-   *           will run `pg backup new -i` at the specified
-   *           interval.
-   * @since    18.0.0
-   */
-  PG_CRON_INCREMENTAL_BACKUP: z.string().default('0 3 * * 2-7'),
-
-  /**
-   * @optional Retention period in days for backup pruning. Backups
-   *           older than this are eligible for deletion.
-   * @since    18.0.0
-   */
-  PG_BACKUP_RETENTION_DAYS: z.coerce.number().int().min(1).default(7),
 
   // // // // // // // // // // // // // // // // // // // // // // //
   // POSTGRES CONFIGS                                               //
