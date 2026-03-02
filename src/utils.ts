@@ -165,9 +165,10 @@ export const matches = (regex: RegExp) => (str: string) => regex.test(str);
  */
 export const timer = {
   /**
-   * @public Sleeps until the given AbortSignal is aborted.
+   * @public Returns the given number of days in milliseconds.
    * @since  18.0.0
    */
+  days: (n: number) => n * 86_400_000,
   /**
    * @public Sleeps until the given date, checking the signal between
    *         naps. Resolves early if aborted.
@@ -338,6 +339,7 @@ export const ascii: Expand<{
 //
 
 const BUCKET_NAME = /^[A-Za-z][A-Za-z0-9_-]+$/;
+const CRON = /^([^\s]+)(\s([^\s]+)){4}$/;
 const DBNAME = /^[A-Za-z][A-Za-z0-9_]+$/;
 const MEMSIZE = /^(\d+)(K|M|G|T)B$/;
 const SLUG = /^[a-z][a-z0-9\-]+$/;
@@ -368,6 +370,15 @@ export const zc = {
     .min(3)
     .max(48)
     .regex(BUCKET_NAME, { error: `must start with a letter followed by letters, numbers, underscores or dashes (${BUCKET_NAME})` }),
+  /**
+   * @public Only accepts cron expressions with 5 fields (minute,
+   *         hour, day of month, month, day of week), no seconds
+   *         field.
+   * @since  18.0.0
+   */
+  cron: () => zc
+    .nes()
+    .regex(CRON, { error: 'must be a valid cron expression with 5 fields (minute, hour, day of month, month, day of week), no seconds field' }),
   /**
    * @public Only accepts strings that are safe to use as database
    *         name.
