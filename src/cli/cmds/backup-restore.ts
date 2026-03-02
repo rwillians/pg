@@ -2,9 +2,9 @@ import type { Backup } from '../../db/tables/backups';
 import { defineCommand, defineOptions, withContext } from '../cmd';
 import { expr, from, tables } from '../../db';
 import type { Context } from '../../context';
-import { spawn } from 'node:child_process';
-import { ascii } from '../../utils';
-import { $, sleep } from 'bun';
+import { ascii, timer } from '../../utils';
+import * as postgres from '../../postgres';
+import { $ } from 'bun';
 
 const options = defineOptions({
   force: {
@@ -65,21 +65,13 @@ export const backupRestore = defineCommand(withContext({
     await $`touch ${pgdata}/recovery.signal`;
 
     log.debug('Starting PostgreSQL for recovery');
-    const child = spawn('docker-entrypoint.sh', [
-      'postgres',
-      '-c', 'restore_command=pg wal unarchive -p %p -f %f',
-    ], { stdio: 'inherit' });
+    const child = await postgres.start(ctx);
 
     log.debug('Waiting for PostgreSQL to become ready');
-    while (true) {
-      const result = await $`pg_isready -U ${config.POSTGRES_USER} -d ${config.POSTGRES_DB}`.nothrow().quiet();
-      if (result.exitCode === 0) break;
-      await sleep(1000);
-    }
+    await postgres.isReady(ctx, { timeout: timer.hours(3) });
 
     log.debug('Shutting down PostgreSQL');
-    child.kill('SIGINT');
-    await new Promise<void>(resolve => child.on('close', resolve));
+    await postgres.stop(child);
 
     log.debug('Deleting temporary files');
     await $`rm -rf ${tmpdir}`;
