@@ -37,19 +37,19 @@ export const statePush = defineCommand(withContext({
 
     const localHash = await fs.sha256(local);
 
-    if (!force && await fs.exists(shash)) {
-      const remoteHash = await fs.text(shash);
+    const remoteHash = await fs.exists(shash)
+      ? await fs.text(shash).then(s => s.trim())
+      : undefined;
 
-      if (localHash === remoteHash.trim()) {
-        log.notice('Remote state is already up to date');
-        return;
-      }
+    if (!force && localHash === remoteHash) {
+      log.notice('Remote state is already up to date');
+      return;
     }
 
     log.debug('Compressing state database');
     await $`tar -zcf ${ltar.path} -C ${fs.dirname(local)} ${basename(local.path)}`.text();
 
-    log.debug(`Uploading state database to ${ascii.blue(star.url)}`);
+    log.debug(`Uploading state database`);
     await fs.cp(ltar, star);
 
     log.debug('Uploading state hash');
@@ -58,6 +58,8 @@ export const statePush = defineCommand(withContext({
     log.debug('Deleting temporary files');
     await fs.rm(ltar);
 
-    log.info('State database pushed to S3');
+    remoteHash
+      ? log.info(`State database pushed to S3 (${ascii.red(remoteHash.slice(0, 8))} → ${ascii.green(localHash.slice(0, 8))})`)
+      : log.info(`State database pushed to S3 (${ascii.green(localHash.slice(0, 8))})`);
   },
 }));
