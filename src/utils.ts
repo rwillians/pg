@@ -288,6 +288,13 @@ export const fmt = {
 
     return `${d} ${t!.slice(0, -1)} UTC`;
   },
+  /**
+   * @public Returns the duration between a start and end date as a
+   *         human-readable string. If the end date is not provided,
+   *         uses the current date as the end date.
+   * @since  18.0.1
+   */
+  took: (start: Date, end: Date = new Date()): string => fmt.interval(end.valueOf() - start.valueOf()),
 };
 
 //
@@ -309,6 +316,14 @@ export const noop = () => {};
  * @since  18.0.0
  */
 export const reject = (value: Error) => Promise.reject(value) as never;
+
+/**
+ * @public Use it to assert that a code-brach is unreachable.
+ * @since  18.0.1
+ */
+export const never = (hint: string = 'Expected this code-branch to be unreachable, yet here we are ¯\\_(ツ)_/¯'): never => {
+  throw new Error(hint);
+};
 
 /**
  * @public Defines an error handler that only handles errors that

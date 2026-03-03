@@ -3,4 +3,5 @@ node_modules/
 .state/
 .env
 .envrc
+play.ts
 .DS_Store

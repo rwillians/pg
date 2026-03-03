@@ -1,6 +1,6 @@
 import { defineCommand, defineOptions, withContext } from '../cmd';
 import { expr, from, into, tables } from '../../db';
-import { ascii } from '../../utils';
+import { ascii, fmt } from '../../utils';
 import { randomUUIDv7 } from 'bun';
 import { $ } from 'bun';
 
@@ -26,7 +26,7 @@ export const backupNew = defineCommand(withContext({
     .option('fast', options.fast),
   handle: async (argv, ctx) => {
     const { incremental, fast } = argv;
-    const { config, db, fs, log } = ctx;
+    const { config, db, fs, log, notify } = ctx;
 
     if (config.PG_READONLY_MODE) {
       log.error('Cannot create backup in read-only mode');
@@ -95,7 +95,7 @@ export const backupNew = defineCommand(withContext({
     // -- Record in state --
 
     log.debug('Updating internal state');
-    await into(tables.backups)
+    const [backup] = await into(tables.backups)
       .values([{
         parentId,
         tar: star.path,
@@ -112,6 +112,10 @@ export const backupNew = defineCommand(withContext({
     await $`rm -rf ${tmpdir}`.text();
     if (manifestPath) await fs.rm(fs.local.file(manifestPath));
 
-    log.info(`Backup ${ascii.blue(label)} completed (${size} bytes)`);
+    log.info(`Backup ${ascii.blue(label)} completed (${fmt.size(size)})`);
+
+    // -- Notify --
+
+    await notify({ kind: 'backup-completed', backup: backup! });
   },
 }));

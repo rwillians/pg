@@ -14,6 +14,7 @@ import { backupStats } from './cli/cmds/backup-stats';
 import { debugBusy } from './cli/cmds/debug-busy';
 import { genSecret } from './cli/cmds/gen-secret';
 import { genSlug } from './cli/cmds/gen-slug';
+import { notificationTest } from './cli/cmds/notification-test';
 import { scheduler } from './cli/cmds/scheduler';
 import { start } from './cli/cmds/start';
 import { statePull } from './cli/cmds/state-pull';
@@ -43,13 +44,17 @@ pg.command('backup', 'Manage base backups (see subcommands)', cli => cli
   .command(backupStats()),
 );
 
-pg.command('debug', 'Tools for debug (see subcommands)', cli => cli
+pg.command('debug', 'Debug tools (see subcommands)', cli => cli
   .command(debugBusy()),
 );
 
 pg.command('gen', 'Commands for generating random values (see subcommands)', cli => cli
   .command(genSecret())
   .command(genSlug()),
+);
+
+pg.command('notification', 'Notification-related utilities (see subcommands)', cli => cli
+  .command(notificationTest()),
 );
 
 pg.command('state', 'Manage state database (see subcommands)', cli => cli

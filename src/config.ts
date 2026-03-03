@@ -1,3 +1,4 @@
+import { TELEGRAM_CONNECTION_STRING } from './notifications/senders/telegram';
 import { major } from './pkg' with { type: 'macro' };
 import { ascii, rescue, zc } from './utils';
 import { join } from 'path';
@@ -90,6 +91,21 @@ const Schema = z.object({
    * @since    18.0.0
    */
   PG_MAX_PITR_DAYS: z.coerce.number().int().min(1).default(7),
+
+  /**
+   * @optional Defines which provider to use for sending notifications
+   *           which. If omitted, notifications are disabled.
+   *
+   *           Supported providers:
+   *           - telegram: `telegram://<token>/<chatId>`
+   *
+   * @since    18.0.1
+   */
+  PG_NOTIFIER_CONNECTION_STRING: z
+    .union([
+      zc.nes().regex(TELEGRAM_CONNECTION_STRING, { error: 'must be in the format `telegram://<token>/<chatId>`' }),
+    ])
+    .optional(),
 
   /**
    * @optional Puts pg in read-only mode, no write operations to

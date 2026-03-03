@@ -1,7 +1,7 @@
 {
   "name": "@rwillians/pg",
   "description": "Managed PostgreSQL made easy.",
-  "version": "18.0.0",
+  "version": "18.0.1",
   "module": "src/index.ts",
   "type": "module",
   "private": true,
@@ -15,7 +15,9 @@
   },
   "dependencies": {
     "@rwillians/qx": "^0.2.0",
+    "arkregex": "^0.0.5",
     "croner": "^10.0.1",
+    "telegraf": "^4.16.3",
     "yargs": "^18.0.0",
     "zod": "^4.3.6"
   },

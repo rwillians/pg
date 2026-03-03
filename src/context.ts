@@ -1,3 +1,4 @@
+import { createNotifier } from './notifications';
 import { connect, migrate } from './db';
 import { createLogger } from './logger';
 import { type StringLike } from 'bun';
@@ -15,12 +16,12 @@ export const createContext = async (env: Bun.Env) => {
   const config = await loadConfig(env);
   const log = await createLogger({ pid, level: config.PG_LOG_LEVEL, silent: config.PG_SILENCED_LOGS });
   const fs = await createFs(config);
+  const { notify } = await createNotifier(config.PG_NOTIFIER_CONNECTION_STRING, log);
 
   const db = await connect(config);
   await migrate(db, log);
 
   const ac = new AbortController();
-  const signal = ac.signal;
 
   /**
    * @public Aborts the context signal.
@@ -46,7 +47,17 @@ export const createContext = async (env: Bun.Env) => {
     log.warning('Running in read-only mode, write operations will fail');
   }
 
-  return { abort, config, db, fs, halt, log, pid, signal };
+  return {
+    abort,
+    config,
+    db,
+    fs,
+    halt,
+    log,
+    notify,
+    pid,
+    signal: ac.signal,
+  };
 };
 
 /**
