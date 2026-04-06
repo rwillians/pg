@@ -1,6 +1,6 @@
 import { defineCommand, defineOptions, withContext } from '../cmd';
+import { ascii, fmt, never } from '../../utils';
 import { from, tables } from '../../db';
-import { ascii, fmt } from '../../utils';
 
 const options = defineOptions({
   force: {
@@ -30,19 +30,25 @@ export const destroy = defineCommand(withContext({
 
     let reclaimed = 0;
 
-    for (const backup of backups) {
+    for (let i = 0; i < backups.length; i++) {
+      const backup = backups[i] ?? never();
+      process.stdout.write(`\rDeleting backup ${i + 1}/${backups.length}...`);
       await fs.rm(fs.s3.file(backup.tar));
       await fs.rm(fs.s3.file(backup.manifest));
       reclaimed += backup.size;
     }
 
+    if (backups.length > 0) process.stdout.write('\n');
     log.info(`Deleted ${backups.length} backup(s)`);
 
-    for (const archive of archives) {
+    for (let i = 0; i < archives.length; i++) {
+      const archive = archives[i] ?? never();
+      process.stdout.write(`\rDeleting archive ${i + 1}/${archives.length}...`);
       await fs.rm(fs.s3.file(archive.tar));
       reclaimed += archive.size;
     }
 
+    if (archives.length > 0) process.stdout.write('\n');
     log.info(`Deleted ${archives.length} archive(s)`);
 
     await fs.rm(fs.s3.file(fs.s3.state.join('state.sqlite3.tar.gz')));
