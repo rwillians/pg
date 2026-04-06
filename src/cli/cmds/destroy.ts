@@ -1,0 +1,55 @@
+import { defineCommand, defineOptions, withContext } from '../cmd';
+import { from, tables } from '../../db';
+import { ascii, fmt } from '../../utils';
+
+const options = defineOptions({
+  force: {
+    describe: 'Skip the safety warning and proceed with the destruction',
+    type: 'boolean' as const,
+    default: false,
+  },
+});
+
+export const destroy = defineCommand(withContext({
+  signature: 'destroy',
+  description: 'Destroys all backups, WAL archives, and the state database',
+  build: cli => cli
+    .option('force', options.force),
+  handle: async (argv, ctx) => {
+    const { force } = argv;
+    const { db, fs, log } = ctx;
+
+    if (!force) {
+      log.warning('This will permanently delete all backups, WAL archives, and the state database');
+      log.warning(`Run with ${ascii.red('--force')} to proceed`);
+      process.exit(1);
+    }
+
+    const backups = await from(tables.backups.as('b')).all(db);
+    const archives = await from(tables.archives.as('a')).all(db);
+
+    let reclaimed = 0;
+
+    for (const backup of backups) {
+      await fs.rm(fs.s3.file(backup.tar));
+      await fs.rm(fs.s3.file(backup.manifest));
+      reclaimed += backup.size;
+    }
+
+    log.info(`Deleted ${backups.length} backup(s)`);
+
+    for (const archive of archives) {
+      await fs.rm(fs.s3.file(archive.tar));
+      reclaimed += archive.size;
+    }
+
+    log.info(`Deleted ${archives.length} archive(s)`);
+
+    await fs.rm(fs.s3.file(fs.s3.state.join('state.sqlite3.tar.gz')));
+    await fs.rm(fs.s3.file(fs.s3.state.join('state.sha256')));
+    await fs.rm(fs.local.file(fs.local.state.join('state.sqlite3')));
+
+    log.info('Deleted state database');
+    log.info(`Reclaimed ${fmt.size(reclaimed)}`);
+  },
+}));

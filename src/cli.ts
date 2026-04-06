@@ -12,6 +12,7 @@ import { backupPrune } from './cli/cmds/backup-prune';
 import { backupRestore } from './cli/cmds/backup-restore';
 import { backupStats } from './cli/cmds/backup-stats';
 import { debugBusy } from './cli/cmds/debug-busy';
+import { destroy } from './cli/cmds/destroy';
 import { genSecret } from './cli/cmds/gen-secret';
 import { genSlug } from './cli/cmds/gen-slug';
 import { notificationTest } from './cli/cmds/notification-test';
@@ -62,6 +63,7 @@ pg.command('state', 'Manage state database (see subcommands)', cli => cli
   .command(statePush()),
 );
 
+pg.command(destroy());
 pg.command(scheduler());
 pg.command(start());
 
