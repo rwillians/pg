@@ -1,6 +1,7 @@
 import { defineCommand, defineOptions, withContext } from '../cmd';
 import { ascii, fmt, never } from '../../utils';
 import { from, tables } from '../../db';
+import { $ } from 'bun';
 
 const options = defineOptions({
   force: {
@@ -12,15 +13,15 @@ const options = defineOptions({
 
 export const destroy = defineCommand(withContext({
   signature: 'destroy',
-  description: 'Destroys all backups, WAL archives, and the state database',
+  description: 'Destroys all backups, WAL archives, the state database, and the data directory',
   build: cli => cli
     .option('force', options.force),
   handle: async (argv, ctx) => {
     const { force } = argv;
-    const { db, fs, log } = ctx;
+    const { config, db, fs, log } = ctx;
 
     if (!force) {
-      log.warning('This will permanently delete all backups, WAL archives, and the state database');
+      log.warning('This will permanently delete all backups, WAL archives, the state database, and the data directory');
       log.warning(`Run with ${ascii.red('--force')} to proceed`);
       process.exit(1);
     }
@@ -56,6 +57,10 @@ export const destroy = defineCommand(withContext({
     await fs.rm(fs.local.file(fs.local.state.join('state.sqlite3')));
 
     log.info('Deleted state database');
+
+    await $`rm -rf ${config.PGDATA}`;
+    log.info('Deleted data directory');
+
     log.info(`Reclaimed ${fmt.size(reclaimed)}`);
   },
 }));
